@@ -4,3 +4,4 @@ __pycache__/
 .env
 findings.json
 scan_report.json
+ai_input.json

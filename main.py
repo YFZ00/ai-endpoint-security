@@ -13,6 +13,8 @@ from engine.evaluator import evaluate_exact
 from engine.policy_loader import load_policies
 from engine.finding import create_finding
 
+from ai.analyzer import build_ai_input
+
 
 COLLECTORS = {
     "permit_root_login": get_permit_root_login,
@@ -46,7 +48,7 @@ def main():
     # YAML 정책 불러오기
     policies = load_policies("policies/linux.yaml")
 
-    # 점검 결과 저장
+    # 전체 점검 결과 저장
     findings = []
 
     # 정책별 점검
@@ -60,14 +62,19 @@ def main():
             print()
             continue
 
+        # 실제 설정값 수집
         actual = collector()
+
+        # YAML의 기대값
         expected = policy["expected"]
 
+        # 정책 기반 PASS / FAIL 판단
         result = evaluate_exact(
             actual,
             expected,
         )
 
+        # Finding 생성
         finding = create_finding(
             policy=policy,
             actual=actual,
@@ -76,6 +83,7 @@ def main():
 
         findings.append(finding)
 
+        # 화면 출력
         print(f"[{finding['id']}]")
         print(f"Title    : {finding['title']}")
         print(f"Expected : {finding['expected']}")
@@ -84,7 +92,7 @@ def main():
         print(f"Result   : {finding['result']}")
         print()
 
-    # 자산 정보 + Finding을 하나의 Scan Report로 구성
+    # 자산 정보와 Finding을 Scan Report로 구성
     scan_report = {
         "asset": {
             "hostname": hostname,
@@ -96,10 +104,22 @@ def main():
         "findings": findings,
     }
 
-    # Scan Report를 JSON 파일로 저장
+    # 전체 Scan Report 저장
     with open("scan_report.json", "w", encoding="utf-8") as file:
         json.dump(
             scan_report,
+            file,
+            indent=2,
+            ensure_ascii=False,
+        )
+
+    # FAIL Finding만 AI 분석용 데이터로 변환
+    ai_input = build_ai_input(scan_report)
+
+    # AI 분석용 입력 저장
+    with open("ai_input.json", "w", encoding="utf-8") as file:
+        json.dump(
+            ai_input,
             file,
             indent=2,
             ensure_ascii=False,
