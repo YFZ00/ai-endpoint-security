@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+ACTION="${1:-}"
+
+CONFIG="/etc/ssh/sshd_config.d/00-ai-endpoint-security.conf"
+BACKUP="/etc/ssh/sshd_config.d/00-ai-endpoint-security.conf.bak"
+
+case "$ACTION" in
+    disable-root-ssh-login)
+
+        echo "[INFO] Applying remediation: disable root SSH login"
+
+        if [ -f "$CONFIG" ]; then
+            cp -a "$CONFIG" "$BACKUP"
+        else
+            touch "$CONFIG"
+            chmod 0644 "$CONFIG"
+            chown root:root "$CONFIG"
+        fi
+
+        if grep -qE '^[[:space:]]*PermitRootLogin[[:space:]]+' "$CONFIG"; then
+            sed -i \
+                's/^[[:space:]]*PermitRootLogin[[:space:]].*/PermitRootLogin no/' \
+                "$CONFIG"
+        else
+            printf '\nPermitRootLogin no\n' >> "$CONFIG"
+        fi
+
+        if /usr/sbin/sshd -t; then
+            systemctl reload ssh
+            echo "[SUCCESS] Root SSH login disabled."
+        else
+            echo "[ERROR] SSH configuration validation failed."
+
+            if [ -f "$BACKUP" ]; then
+                cp -a "$BACKUP" "$CONFIG"
+                echo "[ROLLBACK] Previous configuration restored."
+            fi
+
+            exit 1
+        fi
+        ;;
+
+    *)
+        echo "[ERROR] Unsupported remediation action: $ACTION"
+        exit 2
+        ;;
+esac
