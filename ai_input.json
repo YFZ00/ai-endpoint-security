@@ -1,0 +1,35 @@
+{
+  "task": "Analyze failed endpoint security findings.",
+  "constraints": [
+    "Do not change the PASS or FAIL decision.",
+    "Do not execute remediation automatically.",
+    "Explain the security risk based on the provided finding.",
+    "Recommend a remediation action.",
+    "Describe possible operational impact before remediation."
+  ],
+  "asset": {
+    "hostname": "lab-01",
+    "os": "Ubuntu",
+    "version": "26.04",
+    "kernel": "7.0.0-38-generic",
+    "architecture": "x86_64"
+  },
+  "findings": [
+    {
+      "id": "LINUX-SSH-001",
+      "title": "Disable direct SSH login for root",
+      "expected": "no",
+      "actual": "prohibit-password",
+      "severity": "HIGH",
+      "result": "FAIL"
+    },
+    {
+      "id": "LINUX-SSH-002",
+      "title": "Disable SSH password authentication",
+      "expected": "no",
+      "actual": "yes",
+      "severity": "HIGH",
+      "result": "FAIL"
+    }
+  ]
+}

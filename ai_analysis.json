@@ -1,0 +1,18 @@
+{
+  "analyses": [
+    {
+      "finding_id": "LINUX-SSH-001",
+      "cause": "`PermitRootLogin`이 `prohibit-password`로 설정되어 있어 root의 비밀번호 로그인은 차단되지만 공개키를 이용한 직접 SSH 로그인은 허용됩니다. 기대값은 `no`입니다.",
+      "risk": "공격자가 root의 SSH 공개키 인증 수단을 확보하거나 관련 자격 증명을 탈취하면 일반 계정을 거치지 않고 관리자 권한으로 접속할 수 있습니다.",
+      "recommendation": "`sshd_config` 및 적용되는 설정 파일에서 `PermitRootLogin no`를 설정하고, 설정을 검증한 뒤 SSH 서비스를 재로드하십시오. 관리 작업은 sudo 권한이 있는 일반 계정으로 수행하도록 구성하십시오.",
+      "operational_impact": "변경 후 root의 직접 SSH 접속이 차단됩니다. sudo 계정과 접근 경로를 사전에 확인하지 않으면 원격 관리가 중단될 수 있습니다."
+    },
+    {
+      "finding_id": "LINUX-SSH-002",
+      "cause": "`PasswordAuthentication`이 `yes`로 설정되어 있어 SSH 비밀번호 인증이 허용됩니다. 기대값은 `no`입니다.",
+      "risk": "비밀번호 추측·대입 공격 및 유출된 비밀번호를 이용한 무단 접속에 노출될 수 있습니다.",
+      "recommendation": "`sshd_config` 및 적용되는 설정 파일에서 `PasswordAuthentication no`를 설정하십시오. 적용 전에 필요한 사용자와 자동화가 공개키 등 허용할 인증 방식으로 전환되었는지 확인하고, 설정 검증 후 SSH 서비스를 재로드하십시오.",
+      "operational_impact": "비밀번호 인증에 의존하는 사용자, 배치 작업 또는 관리 도구의 접속이 실패할 수 있습니다. 대체 인증을 사전에 배포하고 접속을 검증하지 않으면 운영 접근이 제한될 수 있습니다."
+    }
+  ]
+}
