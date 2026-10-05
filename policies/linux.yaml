@@ -5,3 +5,10 @@ policies:
     expected: "no"
     severity: HIGH
     comparator: exact
+
+  - id: LINUX-SSH-002
+    title: Disable SSH password authentication
+    collector: password_authentication
+    expected: "no"
+    severity: HIGH
+    comparator: exactnotepad main.py

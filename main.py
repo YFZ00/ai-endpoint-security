@@ -4,17 +4,23 @@ from collectors.linux import (
     get_architecture,
     get_os_release,
     get_permit_root_login,
+    get_password_authentication,
 )
 
 from engine.evaluator import evaluate_exact
 from engine.policy_loader import load_policies
 
 
+COLLECTORS = {
+    "permit_root_login": get_permit_root_login,
+    "password_authentication": get_password_authentication,
+}
+
+
 def main():
     print("=== AI Endpoint Security ===")
     print()
 
-    # 1. Endpoint 기본 정보 수집
     hostname = get_hostname()
     kernel = get_kernel_version()
     architecture = get_architecture()
@@ -30,28 +36,30 @@ def main():
     print("=== Security Findings ===")
     print()
 
-    # 2. YAML 파일에서 보안 정책 읽기
     policies = load_policies("policies/linux.yaml")
 
-    # 지금은 첫 번째 정책 하나만 사용
-    policy = policies[0]
+    for policy in policies:
+        collector_name = policy["collector"]
+        collector = COLLECTORS.get(collector_name)
 
-    # 3. 실제 Linux 설정값 수집
-    actual = get_permit_root_login()
+        if collector is None:
+            print(f"[{policy['id']}]")
+            print(f"Error    : Unknown collector '{collector_name}'")
+            print()
+            continue
 
-    # 4. YAML에 정의한 기대값 가져오기
-    expected = policy["expected"]
+        actual = collector()
+        expected = policy["expected"]
 
-    # 5. 실제값과 기대값 비교
-    result = evaluate_exact(actual, expected)
+        result = evaluate_exact(actual, expected)
 
-    # 6. 결과 출력
-    print(f"[{policy['id']}]")
-    print(f"Title    : {policy['title']}")
-    print(f"Expected : {expected}")
-    print(f"Actual   : {actual}")
-    print(f"Severity : {policy['severity']}")
-    print(f"Result   : {result}")
+        print(f"[{policy['id']}]")
+        print(f"Title    : {policy['title']}")
+        print(f"Expected : {expected}")
+        print(f"Actual   : {actual}")
+        print(f"Severity : {policy['severity']}")
+        print(f"Result   : {result}")
+        print()
 
 
 if __name__ == "__main__":

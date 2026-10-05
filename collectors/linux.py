@@ -49,3 +49,12 @@ def get_permit_root_login() -> str:
     _, value = output.split(maxsplit=1)
 
     return value
+
+def get_password_authentication() -> str:
+    output = run_remote_command(
+        "sudo -n /usr/sbin/sshd -T | grep '^passwordauthentication '"
+    )
+
+    _, value = output.split(maxsplit=1)
+
+    return value
