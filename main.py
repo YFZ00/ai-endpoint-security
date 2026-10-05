@@ -7,12 +7,14 @@ from collectors.linux import (
 )
 
 from engine.evaluator import evaluate_exact
+from engine.policy_loader import load_policies
 
 
 def main():
     print("=== AI Endpoint Security ===")
     print()
 
+    # 1. Endpoint 기본 정보 수집
     hostname = get_hostname()
     kernel = get_kernel_version()
     architecture = get_architecture()
@@ -28,16 +30,27 @@ def main():
     print("=== Security Findings ===")
     print()
 
-    actual = get_permit_root_login()
-    expected = "no"
+    # 2. YAML 파일에서 보안 정책 읽기
+    policies = load_policies("policies/linux.yaml")
 
+    # 지금은 첫 번째 정책 하나만 사용
+    policy = policies[0]
+
+    # 3. 실제 Linux 설정값 수집
+    actual = get_permit_root_login()
+
+    # 4. YAML에 정의한 기대값 가져오기
+    expected = policy["expected"]
+
+    # 5. 실제값과 기대값 비교
     result = evaluate_exact(actual, expected)
 
-    print("[LINUX-SSH-001]")
-    print("Title    : Disable direct SSH login for root")
+    # 6. 결과 출력
+    print(f"[{policy['id']}]")
+    print(f"Title    : {policy['title']}")
     print(f"Expected : {expected}")
     print(f"Actual   : {actual}")
-    print("Severity : HIGH")
+    print(f"Severity : {policy['severity']}")
     print(f"Result   : {result}")
 
 

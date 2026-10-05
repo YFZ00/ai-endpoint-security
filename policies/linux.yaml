@@ -1,0 +1,7 @@
+policies:
+  - id: LINUX-SSH-001
+    title: Disable direct SSH login for root
+    collector: permit_root_login
+    expected: "no"
+    severity: HIGH
+    comparator: exact
