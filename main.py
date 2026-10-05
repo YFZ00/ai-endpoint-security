@@ -9,6 +9,7 @@ from collectors.linux import (
 
 from engine.evaluator import evaluate_exact
 from engine.policy_loader import load_policies
+from engine.finding import create_finding
 
 
 COLLECTORS = {
@@ -53,12 +54,18 @@ def main():
 
         result = evaluate_exact(actual, expected)
 
-        print(f"[{policy['id']}]")
-        print(f"Title    : {policy['title']}")
-        print(f"Expected : {expected}")
-        print(f"Actual   : {actual}")
-        print(f"Severity : {policy['severity']}")
-        print(f"Result   : {result}")
+        finding = create_finding(
+            policy=policy,
+            actual=actual,
+            result=result,
+        )
+
+        print(f"[{finding['id']}]")
+        print(f"Title    : {finding['title']}")
+        print(f"Expected : {finding['expected']}")
+        print(f"Actual   : {finding['actual']}")
+        print(f"Severity : {finding['severity']}")
+        print(f"Result   : {finding['result']}")
         print()
 
 
