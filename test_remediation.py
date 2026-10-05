@@ -40,7 +40,7 @@ def main():
 
         execute_remediation(
             action,
-            dry_run=True,
+            dry_run=False,
         )
 
 

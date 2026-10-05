@@ -1,3 +1,6 @@
+import subprocess
+
+
 REMEDIATION_ACTIONS = {
     "LINUX-SSH-001": {
         "action_id": "disable_root_ssh_login",
@@ -7,6 +10,18 @@ REMEDIATION_ACTIONS = {
         "action_id": "disable_ssh_password_auth",
         "description": "Disable SSH password authentication.",
     },
+}
+
+
+REMOTE_COMMANDS = {
+    "disable_root_ssh_login": [
+        "ssh",
+        "lab-01",
+        "sudo",
+        "-n",
+        "/usr/local/sbin/ai-endpoint-remediate",
+        "disable-root-ssh-login",
+    ],
 }
 
 
@@ -48,13 +63,34 @@ def request_approval(action: dict) -> bool:
 
 
 def execute_remediation(action: dict, dry_run: bool = True) -> None:
+    action_id = action["action_id"]
+
+    command = REMOTE_COMMANDS.get(action_id)
+
+    if command is None:
+        raise ValueError(
+            f"Unsupported remediation action: {action_id}"
+        )
+
     if dry_run:
         print()
         print("[DRY-RUN]")
-        print(f"Approved action: {action['action_id']}")
+        print(f"Approved action: {action_id}")
         print("No system changes were made.")
         return
 
-    raise NotImplementedError(
-        "Real remediation execution is not implemented yet."
+    print()
+    print("[EXECUTE]")
+    print(f"Running approved action: {action_id}")
+
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        check=True,
     )
+
+    if result.stdout:
+        print(result.stdout.strip())
+
+    print("[SUCCESS] Remediation completed.")
