@@ -40,3 +40,12 @@ def get_os_release() -> dict:
         os_info[key] = value
 
     return os_info
+
+def get_permit_root_login() -> str:
+    output = run_remote_command(
+        "sudo -n /usr/sbin/sshd -T | grep '^permitrootlogin '"
+    )
+
+    _, value = output.split(maxsplit=1)
+
+    return value
