@@ -5,3 +5,4 @@ __pycache__/
 findings.json
 scan_report.json
 ai_input.jsonai_analysis.json
+verification_report.json

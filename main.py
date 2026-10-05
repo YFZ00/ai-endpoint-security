@@ -12,6 +12,11 @@ from collectors.linux import (
 from engine.evaluator import evaluate_exact
 from engine.policy_loader import load_policies
 from engine.finding import create_finding
+from engine.remediation import (
+    build_remediation_plan,
+    request_approval,
+    execute_remediation,
+)
 
 from ai.analyzer import (
     build_ai_input,
@@ -25,11 +30,21 @@ COLLECTORS = {
 }
 
 
-def main():
-    print("=== AI Endpoint Security ===")
-    print()
+def save_json(file_name: str, data: dict) -> None:
+    with open(
+        file_name,
+        "w",
+        encoding="utf-8",
+    ) as file:
+        json.dump(
+            data,
+            file,
+            indent=2,
+            ensure_ascii=False,
+        )
 
-    # Endpoint 기본 정보 수집
+
+def scan_endpoint() -> dict:
     hostname = get_hostname()
     kernel = get_kernel_version()
     architecture = get_architecture()
@@ -38,30 +53,15 @@ def main():
     os_name = os_release.get("NAME", "Unknown")
     os_version = os_release.get("VERSION_ID", "Unknown")
 
-    print(f"Hostname     : {hostname}")
-    print(f"OS           : {os_name}")
-    print(f"Version      : {os_version}")
-    print(f"Kernel       : {kernel}")
-    print(f"Architecture : {architecture}")
-
-    print()
-    print("=== Security Findings ===")
-    print()
-
-    # YAML 정책 불러오기
     policies = load_policies("policies/linux.yaml")
 
     findings = []
 
-    # 정책별 보안점검
     for policy in policies:
         collector_name = policy["collector"]
         collector = COLLECTORS.get(collector_name)
 
         if collector is None:
-            print(f"[{policy['id']}]")
-            print(f"Error    : Unknown collector '{collector_name}'")
-            print()
             continue
 
         actual = collector()
@@ -80,16 +80,7 @@ def main():
 
         findings.append(finding)
 
-        print(f"[{finding['id']}]")
-        print(f"Title    : {finding['title']}")
-        print(f"Expected : {finding['expected']}")
-        print(f"Actual   : {finding['actual']}")
-        print(f"Severity : {finding['severity']}")
-        print(f"Result   : {finding['result']}")
-        print()
-
-    # Scan Report 생성
-    scan_report = {
+    return {
         "asset": {
             "hostname": hostname,
             "os": os_name,
@@ -100,60 +91,163 @@ def main():
         "findings": findings,
     }
 
-    with open(
-        "scan_report.json",
-        "w",
-        encoding="utf-8",
-    ) as file:
-        json.dump(
-            scan_report,
-            file,
-            indent=2,
-            ensure_ascii=False,
-        )
 
-    # FAIL Finding만 AI 입력으로 변환
+def print_scan_report(scan_report: dict) -> None:
+    asset = scan_report["asset"]
+
+    print("=== AI Endpoint Security ===")
+    print()
+    print(f"Hostname     : {asset['hostname']}")
+    print(f"OS           : {asset['os']}")
+    print(f"Version      : {asset['version']}")
+    print(f"Kernel       : {asset['kernel']}")
+    print(f"Architecture : {asset['architecture']}")
+
+    print()
+    print("=== Security Findings ===")
+    print()
+
+    for finding in scan_report["findings"]:
+        print(f"[{finding['id']}]")
+        print(f"Title    : {finding['title']}")
+        print(f"Expected : {finding['expected']}")
+        print(f"Actual   : {finding['actual']}")
+        print(f"Severity : {finding['severity']}")
+        print(f"Result   : {finding['result']}")
+        print()
+
+
+def main():
+    # 1. 최초 보안점검
+    scan_report = scan_endpoint()
+
+    print_scan_report(scan_report)
+
+    save_json(
+        "scan_report.json",
+        scan_report,
+    )
+
+    # 2. FAIL Finding만 AI 분석
     ai_input = build_ai_input(scan_report)
 
-    with open(
+    save_json(
         "ai_input.json",
-        "w",
-        encoding="utf-8",
-    ) as file:
-        json.dump(
-            ai_input,
-            file,
-            indent=2,
-            ensure_ascii=False,
-        )
+        ai_input,
+    )
 
-    # 실제 AI 분석
     print("=== AI Security Analysis ===")
     print()
 
     ai_analysis = analyze_findings(ai_input)
 
-    # AI 분석 결과 저장
-    with open(
+    save_json(
         "ai_analysis.json",
-        "w",
-        encoding="utf-8",
-    ) as file:
-        json.dump(
-            ai_analysis,
-            file,
-            indent=2,
-            ensure_ascii=False,
-        )
+        ai_analysis,
+    )
 
-    # AI 분석 결과 화면 출력
-    for analysis in ai_analysis.get("analyses", []):
-        print(f"[{analysis['finding_id']}]")
-        print(f"Cause              : {analysis['cause']}")
-        print(f"Risk               : {analysis['risk']}")
-        print(f"Recommendation     : {analysis['recommendation']}")
-        print(f"Operational Impact : {analysis['operational_impact']}")
+    analyses = ai_analysis.get("analyses", [])
+
+    if not analyses:
+        print("No failed findings require AI analysis.")
         print()
+    else:
+        for analysis in analyses:
+            print(f"[{analysis['finding_id']}]")
+            print(f"Cause              : {analysis['cause']}")
+            print(f"Risk               : {analysis['risk']}")
+            print(f"Recommendation     : {analysis['recommendation']}")
+            print(
+                f"Operational Impact : "
+                f"{analysis['operational_impact']}"
+            )
+            print()
+
+    # 3. 자동조치 가능한 Finding으로 Plan 생성
+    remediation_plan = build_remediation_plan(
+        scan_report["findings"]
+    )
+
+    print("=== Remediation ===")
+    print()
+
+    if not remediation_plan:
+        failed_findings = [
+            finding
+            for finding in scan_report["findings"]
+            if finding["result"] == "FAIL"
+        ]
+
+        if failed_findings:
+            print(
+                "Failed findings exist, but no automated "
+                "remediation is registered."
+            )
+        else:
+            print("No remediation required. All policies passed.")
+
+        return
+
+    # 4. Human Approval 후 실제 조치
+    remediation_executed = False
+
+    for action in remediation_plan:
+        print(f"Finding     : {action['finding_id']}")
+        print(f"Action ID   : {action['action_id']}")
+        print(f"Description : {action['description']}")
+
+        approved = request_approval(action)
+
+        if not approved:
+            print("Remediation rejected.")
+            print()
+            continue
+
+        execute_remediation(action)
+
+        remediation_executed = True
+
+    # 아무 조치도 승인되지 않았다면 종료
+    if not remediation_executed:
+        print("No remediation was executed.")
+        return
+
+    # 5. 실제 조치 후 재점검
+    print()
+    print("=== Verification Scan ===")
+    print()
+
+    verification_report = scan_endpoint()
+
+    for finding in verification_report["findings"]:
+        print(f"[{finding['id']}]")
+        print(f"Expected : {finding['expected']}")
+        print(f"Actual   : {finding['actual']}")
+        print(f"Result   : {finding['result']}")
+        print()
+
+    save_json(
+        "verification_report.json",
+        verification_report,
+    )
+
+    # 6. 재점검 결과 요약
+    remaining_failures = [
+        finding
+        for finding in verification_report["findings"]
+        if finding["result"] == "FAIL"
+    ]
+
+    print("=== Verification Result ===")
+    print()
+
+    if not remaining_failures:
+        print("All security policies passed after remediation.")
+    else:
+        print(
+            f"{len(remaining_failures)} finding(s) "
+            "remain unresolved."
+        )
 
 
 if __name__ == "__main__":

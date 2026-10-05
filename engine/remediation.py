@@ -6,10 +6,6 @@ REMEDIATION_ACTIONS = {
         "action_id": "disable_root_ssh_login",
         "description": "Disable direct SSH login for root.",
     },
-    "LINUX-SSH-002": {
-        "action_id": "disable_ssh_password_auth",
-        "description": "Disable SSH password authentication.",
-    },
 }
 
 
@@ -62,7 +58,7 @@ def request_approval(action: dict) -> bool:
     return answer.strip().lower() == "y"
 
 
-def execute_remediation(action: dict, dry_run: bool = True) -> None:
+def execute_remediation(action: dict) -> None:
     action_id = action["action_id"]
 
     command = REMOTE_COMMANDS.get(action_id)
@@ -71,13 +67,6 @@ def execute_remediation(action: dict, dry_run: bool = True) -> None:
         raise ValueError(
             f"Unsupported remediation action: {action_id}"
         )
-
-    if dry_run:
-        print()
-        print("[DRY-RUN]")
-        print(f"Approved action: {action_id}")
-        print("No system changes were made.")
-        return
 
     print()
     print("[EXECUTE]")
