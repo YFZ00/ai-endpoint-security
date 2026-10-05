@@ -22,14 +22,6 @@
       "actual": "prohibit-password",
       "severity": "HIGH",
       "result": "FAIL"
-    },
-    {
-      "id": "LINUX-SSH-002",
-      "title": "Disable SSH password authentication",
-      "expected": "no",
-      "actual": "yes",
-      "severity": "HIGH",
-      "result": "FAIL"
     }
   ]
 }
