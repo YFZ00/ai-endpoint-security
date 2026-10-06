@@ -1,11 +1,3 @@
 {
-  "analyses": [
-    {
-      "finding_id": "LINUX-SSH-001",
-      "cause": "SSH 설정에서 root 직접 로그인이 완전히 비활성화되어야 하지만, 현재 값인 `prohibit-password`는 비밀번호 인증만 차단하고 공개키 등 비밀번호 외 방식의 root 로그인을 허용합니다.",
-      "risk": "탈취되거나 노출된 root 공개키로 원격에서 직접 관리자 권한을 얻을 수 있어 시스템 전체가 침해될 위험이 있습니다.",
-      "recommendation": "SSH 서버 설정에서 `PermitRootLogin no`를 적용하고 설정을 검증한 뒤 SSH 서비스를 재시작하거나 설정을 다시 로드하십시오. 관리자 작업은 일반 계정으로 로그인한 후 `sudo`를 사용하도록 하십시오.",
-      "operational_impact": "적용 후 root로 직접 SSH 접속할 수 없습니다. 관리자 계정의 sudo 권한과 대체 접속 경로를 먼저 확인하지 않으면 관리 작업이 중단되거나 원격 접근이 제한될 수 있습니다."
-    }
-  ]
+  "analyses": []
 }

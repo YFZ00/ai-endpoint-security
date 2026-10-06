@@ -14,14 +14,5 @@
     "kernel": "7.0.0-38-generic",
     "architecture": "x86_64"
   },
-  "findings": [
-    {
-      "id": "LINUX-SSH-001",
-      "title": "Disable direct SSH login for root",
-      "expected": "no",
-      "actual": "prohibit-password",
-      "severity": "HIGH",
-      "result": "FAIL"
-    }
-  ]
+  "findings": []
 }

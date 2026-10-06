@@ -17,6 +17,7 @@ from engine.remediation import (
     request_approval,
     execute_remediation,
 )
+from engine.audit import write_audit_event
 
 from ai.analyzer import (
     build_ai_input,
@@ -97,6 +98,7 @@ def print_scan_report(scan_report: dict) -> None:
 
     print("=== AI Endpoint Security ===")
     print()
+
     print(f"Hostname     : {asset['hostname']}")
     print(f"OS           : {asset['os']}")
     print(f"Version      : {asset['version']}")
@@ -156,14 +158,17 @@ def main():
             print(f"[{analysis['finding_id']}]")
             print(f"Cause              : {analysis['cause']}")
             print(f"Risk               : {analysis['risk']}")
-            print(f"Recommendation     : {analysis['recommendation']}")
+            print(
+                f"Recommendation     : "
+                f"{analysis['recommendation']}"
+            )
             print(
                 f"Operational Impact : "
                 f"{analysis['operational_impact']}"
             )
             print()
 
-    # 3. 자동조치 가능한 Finding으로 Plan 생성
+    # 3. 자동조치 가능한 Finding만 Plan 생성
     remediation_plan = build_remediation_plan(
         scan_report["findings"]
     )
@@ -184,31 +189,74 @@ def main():
                 "remediation is registered."
             )
         else:
-            print("No remediation required. All policies passed.")
+            print(
+                "No remediation required. "
+                "All policies passed."
+            )
 
         return
 
-    # 4. Human Approval 후 실제 조치
-    remediation_executed = False
+    # Finding ID로 원래 점검결과를 찾기 쉽게 만듦
+    original_findings = {
+        finding["id"]: finding
+        for finding in scan_report["findings"]
+    }
 
+    executed_actions = []
+
+    # 4. Human Approval
     for action in remediation_plan:
+        finding = original_findings[
+            action["finding_id"]
+        ]
+
         print(f"Finding     : {action['finding_id']}")
         print(f"Action ID   : {action['action_id']}")
         print(f"Description : {action['description']}")
 
         approved = request_approval(action)
 
+        # 사용자가 거부한 경우도 Audit Log에 기록
         if not approved:
             print("Remediation rejected.")
             print()
+
+            write_audit_event(
+                {
+                    "hostname": scan_report[
+                        "asset"
+                    ]["hostname"],
+                    "finding_id": action[
+                        "finding_id"
+                    ],
+                    "before": finding["actual"],
+                    "approved": False,
+                    "action_id": action[
+                        "action_id"
+                    ],
+                    "after": finding["actual"],
+                    "verification": "NOT_EXECUTED",
+                }
+            )
+
             continue
 
+        # 실제 remediation 실행
         execute_remediation(action)
 
-        remediation_executed = True
+        executed_actions.append(
+            {
+                "finding_id": action[
+                    "finding_id"
+                ],
+                "action_id": action[
+                    "action_id"
+                ],
+                "before": finding["actual"],
+            }
+        )
 
-    # 아무 조치도 승인되지 않았다면 종료
-    if not remediation_executed:
+    if not executed_actions:
         print("No remediation was executed.")
         return
 
@@ -218,6 +266,13 @@ def main():
     print()
 
     verification_report = scan_endpoint()
+
+    verification_findings = {
+        finding["id"]: finding
+        for finding in verification_report[
+            "findings"
+        ]
+    }
 
     for finding in verification_report["findings"]:
         print(f"[{finding['id']}]")
@@ -231,10 +286,43 @@ def main():
         verification_report,
     )
 
-    # 6. 재점검 결과 요약
+    # 6. 조치 전/후를 Audit Log에 기록
+    for action in executed_actions:
+        verification = verification_findings.get(
+            action["finding_id"]
+        )
+
+        if verification is None:
+            continue
+
+        write_audit_event(
+            {
+                "hostname": verification_report[
+                    "asset"
+                ]["hostname"],
+                "finding_id": action[
+                    "finding_id"
+                ],
+                "before": action["before"],
+                "approved": True,
+                "action_id": action[
+                    "action_id"
+                ],
+                "after": verification[
+                    "actual"
+                ],
+                "verification": verification[
+                    "result"
+                ],
+            }
+        )
+
+    # 7. 최종 결과 요약
     remaining_failures = [
         finding
-        for finding in verification_report["findings"]
+        for finding in verification_report[
+            "findings"
+        ]
         if finding["result"] == "FAIL"
     ]
 
@@ -242,7 +330,10 @@ def main():
     print()
 
     if not remaining_failures:
-        print("All security policies passed after remediation.")
+        print(
+            "All security policies passed "
+            "after remediation."
+        )
     else:
         print(
             f"{len(remaining_failures)} finding(s) "
