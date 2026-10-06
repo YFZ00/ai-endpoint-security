@@ -12,3 +12,10 @@ policies:
     expected: "no"
     severity: HIGH
     comparator: exactnotepad main.py
+
+  - id: LINUX-SSH-003
+    title: Disable SSH login for accounts with empty passwords
+    collector: permit_empty_passwords
+    expected: "no"
+    severity: HIGH
+    comparator: exact

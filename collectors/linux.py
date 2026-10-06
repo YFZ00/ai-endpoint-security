@@ -58,3 +58,12 @@ def get_password_authentication() -> str:
     _, value = output.split(maxsplit=1)
 
     return value
+
+def get_permit_empty_passwords() -> str:
+    output = run_remote_command(
+        "sudo -n /usr/sbin/sshd -T | grep '^permitemptypasswords '"
+    )
+
+    _, value = output.split(maxsplit=1)
+
+    return value

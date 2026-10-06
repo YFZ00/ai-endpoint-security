@@ -7,6 +7,7 @@ from collectors.linux import (
     get_os_release,
     get_permit_root_login,
     get_password_authentication,
+    get_permit_empty_passwords,
 )
 
 from engine.evaluator import evaluate_exact
@@ -28,6 +29,7 @@ from ai.analyzer import (
 COLLECTORS = {
     "permit_root_login": get_permit_root_login,
     "password_authentication": get_password_authentication,
+    "permit_empty_passwords": get_permit_empty_passwords,
 }
 
 
