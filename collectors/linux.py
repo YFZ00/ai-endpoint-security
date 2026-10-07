@@ -67,3 +67,12 @@ def get_permit_empty_passwords() -> str:
     _, value = output.split(maxsplit=1)
 
     return value
+
+def get_max_auth_tries() -> str:
+    output = run_remote_command(
+        "sudo -n /usr/sbin/sshd -T | grep '^maxauthtries '"
+    )
+
+    _, value = output.split(maxsplit=1)
+
+    return value

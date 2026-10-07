@@ -14,5 +14,14 @@
     "kernel": "7.0.0-38-generic",
     "architecture": "x86_64"
   },
-  "findings": []
+  "findings": [
+    {
+      "id": "LINUX-SSH-004",
+      "title": "Limit SSH authentication attempts",
+      "expected": 4,
+      "actual": "6",
+      "severity": "MEDIUM",
+      "result": "FAIL"
+    }
+  ]
 }

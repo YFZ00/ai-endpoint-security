@@ -7,18 +7,41 @@ ACTION="${1:-}"
 CONFIG="/etc/ssh/sshd_config.d/00-ai-endpoint-security.conf"
 BACKUP="/etc/ssh/sshd_config.d/00-ai-endpoint-security.conf.bak"
 
+
+backup_config() {
+    if [ -f "$CONFIG" ]; then
+        cp -a "$CONFIG" "$BACKUP"
+    else
+        touch "$CONFIG"
+        chmod 0644 "$CONFIG"
+        chown root:root "$CONFIG"
+    fi
+}
+
+
+validate_and_reload() {
+    if /usr/sbin/sshd -t; then
+        systemctl reload ssh
+        return 0
+    fi
+
+    echo "[ERROR] SSH configuration validation failed."
+
+    if [ -f "$BACKUP" ]; then
+        cp -a "$BACKUP" "$CONFIG"
+        echo "[ROLLBACK] Previous configuration restored."
+    fi
+
+    exit 1
+}
+
+
 case "$ACTION" in
     disable-root-ssh-login)
 
         echo "[INFO] Applying remediation: disable root SSH login"
 
-        if [ -f "$CONFIG" ]; then
-            cp -a "$CONFIG" "$BACKUP"
-        else
-            touch "$CONFIG"
-            chmod 0644 "$CONFIG"
-            chown root:root "$CONFIG"
-        fi
+        backup_config
 
         if grep -qE '^[[:space:]]*PermitRootLogin[[:space:]]+' "$CONFIG"; then
             sed -i \
@@ -28,22 +51,32 @@ case "$ACTION" in
             printf '\nPermitRootLogin no\n' >> "$CONFIG"
         fi
 
-        if /usr/sbin/sshd -t; then
-            systemctl reload ssh
-            echo "[SUCCESS] Root SSH login disabled."
+        validate_and_reload
+
+        echo "[SUCCESS] Root SSH login disabled."
+        ;;
+
+    limit-ssh-auth-tries)
+
+        echo "[INFO] Applying remediation: limit SSH authentication attempts"
+
+        backup_config
+
+        if grep -qE '^[[:space:]]*MaxAuthTries[[:space:]]+' "$CONFIG"; then
+            sed -i \
+                's/^[[:space:]]*MaxAuthTries[[:space:]].*/MaxAuthTries 4/' \
+                "$CONFIG"
         else
-            echo "[ERROR] SSH configuration validation failed."
-
-            if [ -f "$BACKUP" ]; then
-                cp -a "$BACKUP" "$CONFIG"
-                echo "[ROLLBACK] Previous configuration restored."
-            fi
-
-            exit 1
+            printf '\nMaxAuthTries 4\n' >> "$CONFIG"
         fi
+
+        validate_and_reload
+
+        echo "[SUCCESS] MaxAuthTries set to 4."
         ;;
 
     *)
+
         echo "[ERROR] Unsupported remediation action: $ACTION"
         exit 2
         ;;

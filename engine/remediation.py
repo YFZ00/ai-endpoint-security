@@ -6,8 +6,11 @@ REMEDIATION_ACTIONS = {
         "action_id": "disable_root_ssh_login",
         "description": "Disable direct SSH login for root.",
     },
+    "LINUX-SSH-004": {
+        "action_id": "limit_ssh_auth_tries",
+        "description": "Limit SSH authentication attempts to 4.",
+    },
 }
-
 
 REMOTE_COMMANDS = {
     "disable_root_ssh_login": [
@@ -18,8 +21,15 @@ REMOTE_COMMANDS = {
         "/usr/local/sbin/ai-endpoint-remediate",
         "disable-root-ssh-login",
     ],
+    "limit_ssh_auth_tries": [
+        "ssh",
+        "lab-01",
+        "sudo",
+        "-n",
+        "/usr/local/sbin/ai-endpoint-remediate",
+        "limit-ssh-auth-tries",
+    ],
 }
-
 
 def build_remediation_plan(findings: list) -> list:
     plan = []

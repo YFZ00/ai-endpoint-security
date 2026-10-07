@@ -8,9 +8,10 @@ from collectors.linux import (
     get_permit_root_login,
     get_password_authentication,
     get_permit_empty_passwords,
+    get_max_auth_tries,
 )
 
-from engine.evaluator import evaluate_exact
+from engine.evaluator import evaluate
 from engine.policy_loader import load_policies
 from engine.finding import create_finding
 from engine.remediation import (
@@ -30,6 +31,7 @@ COLLECTORS = {
     "permit_root_login": get_permit_root_login,
     "password_authentication": get_password_authentication,
     "permit_empty_passwords": get_permit_empty_passwords,
+    "max_auth_tries": get_max_auth_tries,
 }
 
 
@@ -69,10 +71,12 @@ def scan_endpoint() -> dict:
 
         actual = collector()
         expected = policy["expected"]
+        comparator = policy["comparator"]
 
-        result = evaluate_exact(
+        result = evaluate(
             actual,
             expected,
+            comparator,
         )
 
         finding = create_finding(
@@ -198,7 +202,6 @@ def main():
 
         return
 
-    # Finding ID로 원래 점검결과를 찾기 쉽게 만듦
     original_findings = {
         finding["id"]: finding
         for finding in scan_report["findings"]
@@ -218,24 +221,17 @@ def main():
 
         approved = request_approval(action)
 
-        # 사용자가 거부한 경우도 Audit Log에 기록
         if not approved:
             print("Remediation rejected.")
             print()
 
             write_audit_event(
                 {
-                    "hostname": scan_report[
-                        "asset"
-                    ]["hostname"],
-                    "finding_id": action[
-                        "finding_id"
-                    ],
+                    "hostname": scan_report["asset"]["hostname"],
+                    "finding_id": action["finding_id"],
                     "before": finding["actual"],
                     "approved": False,
-                    "action_id": action[
-                        "action_id"
-                    ],
+                    "action_id": action["action_id"],
                     "after": finding["actual"],
                     "verification": "NOT_EXECUTED",
                 }
@@ -243,17 +239,12 @@ def main():
 
             continue
 
-        # 실제 remediation 실행
         execute_remediation(action)
 
         executed_actions.append(
             {
-                "finding_id": action[
-                    "finding_id"
-                ],
-                "action_id": action[
-                    "action_id"
-                ],
+                "finding_id": action["finding_id"],
+                "action_id": action["action_id"],
                 "before": finding["actual"],
             }
         )
@@ -271,9 +262,7 @@ def main():
 
     verification_findings = {
         finding["id"]: finding
-        for finding in verification_report[
-            "findings"
-        ]
+        for finding in verification_report["findings"]
     }
 
     for finding in verification_report["findings"]:
@@ -288,7 +277,7 @@ def main():
         verification_report,
     )
 
-    # 6. 조치 전/후를 Audit Log에 기록
+    # 6. 조치 전/후 Audit Log 기록
     for action in executed_actions:
         verification = verification_findings.get(
             action["finding_id"]
@@ -299,32 +288,20 @@ def main():
 
         write_audit_event(
             {
-                "hostname": verification_report[
-                    "asset"
-                ]["hostname"],
-                "finding_id": action[
-                    "finding_id"
-                ],
+                "hostname": verification_report["asset"]["hostname"],
+                "finding_id": action["finding_id"],
                 "before": action["before"],
                 "approved": True,
-                "action_id": action[
-                    "action_id"
-                ],
-                "after": verification[
-                    "actual"
-                ],
-                "verification": verification[
-                    "result"
-                ],
+                "action_id": action["action_id"],
+                "after": verification["actual"],
+                "verification": verification["result"],
             }
         )
 
-    # 7. 최종 결과 요약
+    # 7. 최종 결과
     remaining_failures = [
         finding
-        for finding in verification_report[
-            "findings"
-        ]
+        for finding in verification_report["findings"]
         if finding["result"] == "FAIL"
     ]
 
