@@ -81,3 +81,8 @@ def get_passwd_file_security() -> str:
     return run_remote_command(
         "stat -c '%U:%G %a' /etc/passwd"
     )
+
+def get_shadow_file_security() -> str:
+    return run_remote_command(
+        "stat -c '%U:%G %a' /etc/shadow"
+    )

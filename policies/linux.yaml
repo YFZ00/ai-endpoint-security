@@ -33,3 +33,10 @@ policies:
     expected: "root:root 644"
     severity: HIGH
     comparator: exact
+
+  - id: LINUX-FILE-002
+    title: Protect /etc/shadow ownership and permissions
+    collector: shadow_file_security
+    expected: "root:shadow 640"
+    severity: HIGH
+    comparator: exact
