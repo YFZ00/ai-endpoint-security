@@ -11,6 +11,7 @@ from collectors.linux import (
     get_max_auth_tries,
     get_passwd_file_security,
     get_shadow_file_security,
+    get_group_file_security,
 )
 
 from engine.evaluator import evaluate
@@ -36,6 +37,7 @@ COLLECTORS = {
     "max_auth_tries": get_max_auth_tries,
     "passwd_file_security": get_passwd_file_security,
     "shadow_file_security": get_shadow_file_security,
+    "group_file_security": get_group_file_security,
 }
 
 

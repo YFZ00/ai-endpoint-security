@@ -40,3 +40,10 @@ policies:
     expected: "root:shadow 640"
     severity: HIGH
     comparator: exact
+
+  - id: LINUX-FILE-003
+    title: Protect /etc/group ownership and permissions
+    collector: group_file_security
+    expected: "root:root 644"
+    severity: HIGH
+    comparator: exact
