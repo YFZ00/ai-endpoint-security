@@ -76,3 +76,8 @@ def get_max_auth_tries() -> str:
     _, value = output.split(maxsplit=1)
 
     return value
+
+def get_passwd_file_security() -> str:
+    return run_remote_command(
+        "stat -c '%U:%G %a' /etc/passwd"
+    )

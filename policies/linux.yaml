@@ -26,3 +26,10 @@ policies:
     expected: 4
     severity: MEDIUM
     comparator: less_than_or_equal
+
+  - id: LINUX-FILE-001
+    title: Protect /etc/passwd ownership and permissions
+    collector: passwd_file_security
+    expected: "root:root 644"
+    severity: HIGH
+    comparator: exact

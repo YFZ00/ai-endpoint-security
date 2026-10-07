@@ -9,6 +9,7 @@ from collectors.linux import (
     get_password_authentication,
     get_permit_empty_passwords,
     get_max_auth_tries,
+    get_passwd_file_security,
 )
 
 from engine.evaluator import evaluate
@@ -32,6 +33,7 @@ COLLECTORS = {
     "password_authentication": get_password_authentication,
     "permit_empty_passwords": get_permit_empty_passwords,
     "max_auth_tries": get_max_auth_tries,
+    "passwd_file_security": get_passwd_file_security,
 }
 
 
