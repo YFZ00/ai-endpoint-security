@@ -10,6 +10,10 @@ REMEDIATION_ACTIONS = {
         "action_id": "limit_ssh_auth_tries",
         "description": "Limit SSH authentication attempts to 4.",
     },
+    "LINUX-FILE-001": {
+        "action_id": "secure_passwd_file",
+        "description": "Restore /etc/passwd ownership and permissions.",
+    },
 }
 
 REMOTE_COMMANDS = {
@@ -28,6 +32,14 @@ REMOTE_COMMANDS = {
         "-n",
         "/usr/local/sbin/ai-endpoint-remediate",
         "limit-ssh-auth-tries",
+    ],
+    "secure_passwd_file": [
+        "ssh",
+        "lab-01",
+        "sudo",
+        "-n",
+        "/usr/local/sbin/ai-endpoint-remediate",
+        "secure-passwd-file",
     ],
 }
 

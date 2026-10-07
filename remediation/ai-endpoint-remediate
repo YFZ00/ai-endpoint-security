@@ -37,6 +37,7 @@ validate_and_reload() {
 
 
 case "$ACTION" in
+
     disable-root-ssh-login)
 
         echo "[INFO] Applying remediation: disable root SSH login"
@@ -55,6 +56,7 @@ case "$ACTION" in
 
         echo "[SUCCESS] Root SSH login disabled."
         ;;
+
 
     limit-ssh-auth-tries)
 
@@ -75,9 +77,29 @@ case "$ACTION" in
         echo "[SUCCESS] MaxAuthTries set to 4."
         ;;
 
+
+    secure-passwd-file)
+
+        echo "[INFO] Applying remediation: secure /etc/passwd"
+
+        chown root:root /etc/passwd
+        chmod 0644 /etc/passwd
+
+        CURRENT="$(stat -c '%U:%G %a' /etc/passwd)"
+
+        if [ "$CURRENT" = "root:root 644" ]; then
+            echo "[SUCCESS] /etc/passwd ownership and permissions secured."
+        else
+            echo "[ERROR] /etc/passwd verification failed: $CURRENT"
+            exit 1
+        fi
+        ;;
+
+
     *)
 
         echo "[ERROR] Unsupported remediation action: $ACTION"
         exit 2
         ;;
+
 esac

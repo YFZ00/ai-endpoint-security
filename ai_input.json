@@ -14,5 +14,14 @@
     "kernel": "7.0.0-38-generic",
     "architecture": "x86_64"
   },
-  "findings": []
+  "findings": [
+    {
+      "id": "LINUX-FILE-001",
+      "title": "Protect /etc/passwd ownership and permissions",
+      "expected": "root:root 644",
+      "actual": "root:root 664",
+      "severity": "HIGH",
+      "result": "FAIL"
+    }
+  ]
 }
