@@ -96,3 +96,13 @@ def get_gshadow_file_security() -> str:
     return run_remote_command(
         "stat -c '%U:%G %a' /etc/gshadow"
     )
+
+def get_pass_max_days() -> str:
+    return run_remote_command(
+        """awk '$1 == "PASS_MAX_DAYS" {print $2}' /etc/login.defs"""
+    )
+
+def get_pass_min_days() -> str:
+    return run_remote_command(
+        """awk '$1 == "PASS_MIN_DAYS" {print $2}' /etc/login.defs"""
+    )

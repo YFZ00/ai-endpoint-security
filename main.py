@@ -13,6 +13,8 @@ from collectors.linux import (
     get_shadow_file_security,
     get_group_file_security,
     get_gshadow_file_security,
+    get_pass_max_days,
+    get_pass_min_days,
 )
 
 from engine.evaluator import evaluate
@@ -40,6 +42,8 @@ COLLECTORS = {
     "shadow_file_security": get_shadow_file_security,
     "group_file_security": get_group_file_security,
     "gshadow_file_security": get_gshadow_file_security,
+    "pass_max_days": get_pass_max_days,
+    "pass_min_days": get_pass_min_days,
 }
 
 
