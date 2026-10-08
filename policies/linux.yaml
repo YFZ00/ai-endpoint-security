@@ -47,3 +47,10 @@ policies:
     expected: "root:root 644"
     severity: HIGH
     comparator: exact
+
+  - id: LINUX-FILE-004
+    title: Protect /etc/gshadow ownership and permissions
+    collector: gshadow_file_security
+    expected: "root:shadow 640"
+    severity: HIGH
+    comparator: exact

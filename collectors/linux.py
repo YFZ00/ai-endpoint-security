@@ -91,3 +91,8 @@ def get_group_file_security() -> str:
     return run_remote_command(
         "stat -c '%U:%G %a' /etc/group"
     )
+
+def get_gshadow_file_security() -> str:
+    return run_remote_command(
+        "stat -c '%U:%G %a' /etc/gshadow"
+    )
