@@ -20,7 +20,15 @@ def calculate_risk_level(score: int) -> str:
 
 
 def calculate_posture(findings: list) -> dict:
-    score = 100
+    raw_score = 100
+    effective_score = 100
+
+    raw_failure_counts = {
+        "CRITICAL": 0,
+        "HIGH": 0,
+        "MEDIUM": 0,
+        "LOW": 0,
+    }
 
     failure_counts = {
         "CRITICAL": 0,
@@ -30,11 +38,9 @@ def calculate_posture(findings: list) -> dict:
     }
 
     failed_findings = []
+    exempt_findings = []
 
     for finding in findings:
-        if finding["result"] != "FAIL":
-            continue
-
         severity = finding["severity"].upper()
 
         weight = SEVERITY_WEIGHTS.get(
@@ -42,24 +48,56 @@ def calculate_posture(findings: list) -> dict:
             0,
         )
 
-        score -= weight
-
-        if severity in failure_counts:
-            failure_counts[severity] += 1
-
-        failed_findings.append(
-            {
-                "id": finding["id"],
-                "title": finding["title"],
-                "severity": severity,
-            }
+        original_result = finding.get(
+            "original_result",
+            finding["result"],
         )
 
-    score = max(score, 0)
+        if original_result == "FAIL":
+            raw_score -= weight
+
+            if severity in raw_failure_counts:
+                raw_failure_counts[severity] += 1
+
+        if finding["result"] == "FAIL":
+            effective_score -= weight
+
+            if severity in failure_counts:
+                failure_counts[severity] += 1
+
+            failed_findings.append(
+                {
+                    "id": finding["id"],
+                    "title": finding["title"],
+                    "severity": severity,
+                }
+            )
+
+        if finding["result"] == "EXEMPT":
+            exempt_findings.append(
+                {
+                    "id": finding["id"],
+                    "title": finding["title"],
+                    "severity": severity,
+                    "exception": finding["exception"],
+                }
+            )
+
+    raw_score = max(raw_score, 0)
+    effective_score = max(effective_score, 0)
 
     return {
-        "score": score,
-        "risk_level": calculate_risk_level(score),
+        "score": effective_score,
+        "raw_score": raw_score,
+        "risk_level": calculate_risk_level(
+            effective_score
+        ),
+        "raw_risk_level": calculate_risk_level(
+            raw_score
+        ),
         "failure_counts": failure_counts,
+        "raw_failure_counts": raw_failure_counts,
+        "exception_count": len(exempt_findings),
         "failed_findings": failed_findings,
+        "exempt_findings": exempt_findings,
     }

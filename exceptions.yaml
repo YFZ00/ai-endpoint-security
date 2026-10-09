@@ -1,0 +1,8 @@
+exceptions:
+  - id: EXC-001
+    finding_id: WINDOWS-DISK-001
+    hostname: LAB-WINPC-01
+    reason: "BitLocker is intentionally disabled on this disposable lab VM."
+    approved_by: "lab-owner"
+    approved_at: "2026-10-09"
+    expires_at: "2026-11-30"

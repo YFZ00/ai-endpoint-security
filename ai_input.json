@@ -17,16 +17,7 @@
         "build": "26300",
         "architecture": "64비트"
       },
-      "findings": [
-        {
-          "id": "WINDOWS-DISK-001",
-          "title": "Enable BitLocker protection on system drive",
-          "expected": "on",
-          "actual": "off",
-          "severity": "HIGH",
-          "result": "FAIL"
-        }
-      ]
+      "findings": []
     }
   ]
 }
