@@ -14,7 +14,12 @@ REMEDIATION_ACTIONS = {
         "action_id": "secure_passwd_file",
         "description": "Restore /etc/passwd ownership and permissions.",
     },
+    "WINDOWS-FIREWALL-001": {
+        "action_id": "enable_windows_firewall",
+        "description": "Enable Windows Firewall for all profiles.",
+    },
 }
+
 
 REMOTE_COMMANDS = {
     "disable_root_ssh_login": [
@@ -41,7 +46,20 @@ REMOTE_COMMANDS = {
         "/usr/local/sbin/ai-endpoint-remediate",
         "secure-passwd-file",
     ],
+    "enable_windows_firewall": [
+        "ssh",
+        "lab-winpc-01",
+        "powershell",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:/ProgramData/AIEndpointSecurity/ai-endpoint-remediate.ps1",
+        "-Action",
+        "enable-firewall-all-profiles",
+    ],
 }
+
 
 def build_remediation_plan(findings: list) -> list:
     plan = []
