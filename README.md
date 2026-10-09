@@ -38,47 +38,47 @@ This project extends that workflow into a controlled security operations pipelin
 
 Collect
 
-&#x20; ↓
+ ↓
 
 Policy Evaluation
 
-&#x20; ↓
+ ↓
 
 PASS / FAIL
 
-&#x20; ↓
+ ↓
 
 Exception Management
 
-&#x20; ↓
+ ↓
 
 Posture Scoring
 
-&#x20; ↓
+ ↓
 
 AI Agent Investigation
 
-&#x20; ↓
+ ↓
 
 Remediation Proposal
 
-&#x20; ↓
+ ↓
 
 Deterministic Harness Validation
 
-&#x20; ↓
+ ↓
 
 Human Approval
 
-&#x20; ↓
+ ↓
 
 Allowlisted Remediation
 
-&#x20; ↓
+ ↓
 
 Verification Scan
 
-&#x20; ↓
+ ↓
 
 Audit Logging
 
