@@ -1,9 +1,13 @@
 .venv/
 __pycache__/
 *.pyc
+
 .env
+
 findings.json
 scan_report.json
-ai_input.jsonai_analysis.json
+ai_input.json
+ai_analysis.json
 verification_report.json
+
 logs/*.jsonl
