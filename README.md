@@ -17,9 +17,13 @@ The project is designed around one core principle:
 \---
 
 
+## Documentation
+
+- [Architecture](docs/architecture.md) - 전체 구조와 AI / Deterministic Trust Boundary
+- [End-to-End Demo](docs/demo.md) - Windows Firewall 탐지부터 AI Agent, Harness, 승인, 조치, 검증까지의 실제 시나리오
+
 
 \## 1. Project Overview
-
 
 
 Traditional endpoint security assessment tools often stop at identifying insecure configurations.
