@@ -1,0 +1,14 @@
+policies:
+  - id: WINDOWS-DEFENDER-001
+    title: Enable Microsoft Defender real-time protection
+    collector: defender_realtime_protection
+    expected: "true"
+    severity: HIGH
+    comparator: exact
+
+  - id: WINDOWS-FIREWALL-001
+    title: Enable Windows Firewall for all profiles
+    collector: windows_firewall_all_enabled
+    expected: "true"
+    severity: HIGH
+    comparator: exact

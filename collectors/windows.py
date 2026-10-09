@@ -40,3 +40,13 @@ def get_windows_architecture() -> str:
     return run_remote_powershell(
         "(Get-CimInstance Win32_OperatingSystem).OSArchitecture"
     )
+
+def get_defender_realtime_protection() -> str:
+    return run_remote_powershell(
+        "(Get-MpComputerStatus).RealTimeProtectionEnabled.ToString().ToLower()"
+    )
+
+def get_windows_firewall_all_enabled() -> str:
+    return run_remote_powershell(
+        "((Get-NetFirewallProfile).Enabled -notcontains $false).ToString().ToLower()"
+    )
