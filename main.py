@@ -25,6 +25,7 @@ from collectors.windows import (
     get_windows_architecture,
     get_defender_realtime_protection,
     get_windows_firewall_all_enabled,
+    get_guest_account_enabled,
 )
 
 from engine.evaluator import evaluate
@@ -60,6 +61,7 @@ LINUX_COLLECTORS = {
 WINDOWS_COLLECTORS = {
     "defender_realtime_protection": get_defender_realtime_protection,
     "windows_firewall_all_enabled": get_windows_firewall_all_enabled,
+    "guest_account_enabled": get_guest_account_enabled,
 }
 
 

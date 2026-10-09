@@ -53,16 +53,7 @@
         "build": "26300",
         "architecture": "64비트"
       },
-      "findings": [
-        {
-          "id": "WINDOWS-FIREWALL-001",
-          "title": "Enable Windows Firewall for all profiles",
-          "expected": "true",
-          "actual": "false",
-          "severity": "HIGH",
-          "result": "FAIL"
-        }
-      ]
+      "findings": []
     }
   ]
 }

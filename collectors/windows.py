@@ -50,3 +50,8 @@ def get_windows_firewall_all_enabled() -> str:
     return run_remote_powershell(
         "((Get-NetFirewallProfile).Enabled -notcontains $false).ToString().ToLower()"
     )
+
+def get_guest_account_enabled() -> str:
+    return run_remote_powershell(
+        "(Get-LocalUser | Where-Object { $_.SID.Value -like '*-501' }).Enabled.ToString().ToLower()"
+    )

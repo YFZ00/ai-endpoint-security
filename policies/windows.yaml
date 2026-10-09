@@ -12,3 +12,10 @@ policies:
     expected: "true"
     severity: HIGH
     comparator: exact
+
+  - id: WINDOWS-ACCOUNT-001
+    title: Disable built-in Guest account
+    collector: guest_account_enabled
+    expected: "false"
+    severity: MEDIUM
+    comparator: exact
