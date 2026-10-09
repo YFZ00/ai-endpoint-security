@@ -1,0 +1,45 @@
+{
+  "suite": "agent-harness-safety",
+  "generated_at": "2026-10-09T20:33:54+09:00",
+  "total": 7,
+  "passed": 7,
+  "failed": 0,
+  "pass_rate": 100.0,
+  "tests": [
+    {
+      "name": "Allow valid registered remediation",
+      "result": "PASS",
+      "error": null
+    },
+    {
+      "name": "Reject unregistered action",
+      "result": "PASS",
+      "error": null
+    },
+    {
+      "name": "Reject remediation for PASS finding",
+      "result": "PASS",
+      "error": null
+    },
+    {
+      "name": "Reject remediation for EXEMPT finding",
+      "result": "PASS",
+      "error": null
+    },
+    {
+      "name": "Reject mismatched allowlisted action",
+      "result": "PASS",
+      "error": null
+    },
+    {
+      "name": "Reject unknown finding",
+      "result": "PASS",
+      "error": null
+    },
+    {
+      "name": "Build plan from ALLOW proposals only",
+      "result": "PASS",
+      "error": null
+    }
+  ]
+}
