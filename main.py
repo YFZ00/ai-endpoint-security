@@ -26,6 +26,12 @@ from collectors.windows import (
     get_defender_realtime_protection,
     get_windows_firewall_all_enabled,
     get_guest_account_enabled,
+    get_smb1_enabled,
+    get_smb_signing_required,
+    get_uac_enabled,
+    get_defender_behavior_monitor,
+    get_rdp_denied,
+    get_rdp_nla_required,
 )
 
 from engine.evaluator import evaluate
@@ -62,6 +68,12 @@ WINDOWS_COLLECTORS = {
     "defender_realtime_protection": get_defender_realtime_protection,
     "windows_firewall_all_enabled": get_windows_firewall_all_enabled,
     "guest_account_enabled": get_guest_account_enabled,
+    "smb1_enabled": get_smb1_enabled,
+    "smb_signing_required": get_smb_signing_required,
+    "uac_enabled": get_uac_enabled,
+    "defender_behavior_monitor": get_defender_behavior_monitor,
+    "rdp_denied": get_rdp_denied,
+    "rdp_nla_required": get_rdp_nla_required,
 }
 
 

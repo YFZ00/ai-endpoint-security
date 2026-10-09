@@ -19,3 +19,45 @@ policies:
     expected: "false"
     severity: MEDIUM
     comparator: exact
+
+  - id: WINDOWS-SMB-001
+    title: Disable SMBv1 protocol
+    collector: smb1_enabled
+    expected: "false"
+    severity: HIGH
+    comparator: exact
+
+  - id: WINDOWS-SMB-002
+    title: Require SMB server signing
+    collector: smb_signing_required
+    expected: "true"
+    severity: HIGH
+    comparator: exact
+
+  - id: WINDOWS-UAC-001
+    title: Enable User Account Control
+    collector: uac_enabled
+    expected: "1"
+    severity: HIGH
+    comparator: exact
+
+  - id: WINDOWS-DEFENDER-002
+    title: Enable Microsoft Defender behavior monitoring
+    collector: defender_behavior_monitor
+    expected: "true"
+    severity: HIGH
+    comparator: exact
+
+  - id: WINDOWS-RDP-001
+    title: Disable Remote Desktop when not required
+    collector: rdp_denied
+    expected: "1"
+    severity: MEDIUM
+    comparator: exact
+
+  - id: WINDOWS-RDP-002
+    title: Require Network Level Authentication for RDP
+    collector: rdp_nla_required
+    expected: "1"
+    severity: HIGH
+    comparator: exact
