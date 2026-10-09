@@ -61,3 +61,38 @@ policies:
     expected: "1"
     severity: HIGH
     comparator: exact
+
+  - id: WINDOWS-DISK-001
+    title: Enable BitLocker protection on system drive
+    collector: bitlocker_protection
+    expected: "on"
+    severity: HIGH
+    comparator: exact
+
+  - id: WINDOWS-TPM-001
+    title: Require TPM to be present and ready
+    collector: tpm_ready
+    expected: "true"
+    severity: HIGH
+    comparator: exact
+
+  - id: WINDOWS-BOOT-001
+    title: Enable Secure Boot
+    collector: secure_boot_enabled
+    expected: "true"
+    severity: HIGH
+    comparator: exact
+
+  - id: WINDOWS-ACCOUNT-002
+    title: Disable built-in Administrator account
+    collector: builtin_administrator_enabled
+    expected: "false"
+    severity: HIGH
+    comparator: exact
+
+  - id: WINDOWS-SMB-003
+    title: Require SMB client signing
+    collector: smb_client_signing_required
+    expected: "true"
+    severity: HIGH
+    comparator: exact

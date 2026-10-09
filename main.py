@@ -1,4 +1,5 @@
 import json
+import argparse
 
 from collectors.linux import (
     get_hostname,
@@ -32,6 +33,11 @@ from collectors.windows import (
     get_defender_behavior_monitor,
     get_rdp_denied,
     get_rdp_nla_required,
+    get_bitlocker_protection,
+    get_tpm_ready,
+    get_secure_boot_enabled,
+    get_builtin_administrator_enabled,
+    get_smb_client_signing_required,
 )
 
 from engine.evaluator import evaluate
@@ -74,6 +80,11 @@ WINDOWS_COLLECTORS = {
     "defender_behavior_monitor": get_defender_behavior_monitor,
     "rdp_denied": get_rdp_denied,
     "rdp_nla_required": get_rdp_nla_required,
+    "bitlocker_protection": get_bitlocker_protection,
+    "tpm_ready": get_tpm_ready,
+    "secure_boot_enabled": get_secure_boot_enabled,
+    "builtin_administrator_enabled": get_builtin_administrator_enabled,
+    "smb_client_signing_required": get_smb_client_signing_required,
 }
 
 
@@ -401,96 +412,115 @@ def remediate_endpoint(
 
     return verification_report
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="AI Endpoint Security"
+    )
+
+    parser.add_argument(
+        "--endpoint",
+        choices=["all", "linux", "windows"],
+        default="all",
+        help="Select endpoint to scan",
+    )
+
+    return parser.parse_args()
 
 def main():
+    args = parse_args()
+
     print("=== AI Endpoint Security ===")
     print()
 
-    # 1. Scan all endpoints
-    linux_report = scan_linux_endpoint()
-    windows_report = scan_windows_endpoint()
+    endpoints = []
 
-    print_endpoint_report(
-        "Linux Endpoint",
-        linux_report,
-    )
+    if args.endpoint in ("all", "linux"):
+        linux_report = scan_linux_endpoint()
 
-    print_endpoint_report(
-        "Windows Endpoint",
-        windows_report,
-    )
+        print_endpoint_report(
+            "Linux Endpoint",
+            linux_report,
+        )
+
+        endpoints.append(
+            {
+                "name": "Linux Endpoint",
+                "report": linux_report,
+                "scan_function": scan_linux_endpoint,
+            }
+        )
+
+    if args.endpoint in ("all", "windows"):
+        windows_report = scan_windows_endpoint()
+
+        print_endpoint_report(
+            "Windows Endpoint",
+            windows_report,
+        )
+
+        endpoints.append(
+            {
+                "name": "Windows Endpoint",
+                "report": windows_report,
+                "scan_function": scan_windows_endpoint,
+            }
+        )
 
     save_json(
         "scan_report.json",
         {
             "endpoints": [
-                linux_report,
-                windows_report,
+                endpoint["report"]
+                for endpoint in endpoints
             ]
         },
     )
 
-    # 2. AI analysis
-    linux_ai_input, linux_ai_analysis = analyze_endpoint(
-        "Linux Endpoint",
-        linux_report,
-    )
+    ai_inputs = []
+    ai_analyses = []
 
-    windows_ai_input, windows_ai_analysis = analyze_endpoint(
-        "Windows Endpoint",
-        windows_report,
-    )
+    for endpoint in endpoints:
+        ai_input, ai_analysis = analyze_endpoint(
+            endpoint["name"],
+            endpoint["report"],
+        )
+
+        ai_inputs.append(ai_input)
+
+        ai_analyses.append(
+            {
+                "asset": endpoint["report"]["asset"],
+                "analysis": ai_analysis,
+            }
+        )
 
     save_json(
         "ai_input.json",
         {
-            "endpoints": [
-                linux_ai_input,
-                windows_ai_input,
-            ]
+            "endpoints": ai_inputs
         },
     )
 
     save_json(
         "ai_analysis.json",
         {
-            "endpoints": [
-                {
-                    "asset": linux_report["asset"],
-                    "analysis": linux_ai_analysis,
-                },
-                {
-                    "asset": windows_report["asset"],
-                    "analysis": windows_ai_analysis,
-                },
-            ]
+            "endpoints": ai_analyses
         },
-    )
-
-    # 3. Human-approved remediation
-    linux_verification = remediate_endpoint(
-        "Linux Endpoint",
-        linux_report,
-        scan_linux_endpoint,
-    )
-
-    windows_verification = remediate_endpoint(
-        "Windows Endpoint",
-        windows_report,
-        scan_windows_endpoint,
     )
 
     verification_reports = []
 
-    if linux_verification is not None:
-        verification_reports.append(
-            linux_verification
+    for endpoint in endpoints:
+        verification = remediate_endpoint(
+            endpoint["name"],
+            endpoint["report"],
+            endpoint["scan_function"],
         )
 
-    if windows_verification is not None:
-        verification_reports.append(
-            windows_verification
-        )
+        if verification is not None:
+            verification_reports.append(
+                verification
+            )
 
     save_json(
         "verification_report.json",

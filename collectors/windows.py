@@ -94,3 +94,32 @@ def get_rdp_nla_required() -> str:
     return run_remote_powershell(
         "(Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server\\WinStations\\RDP-Tcp').UserAuthentication.ToString()"
     )
+
+def get_bitlocker_protection() -> str:
+    return run_remote_powershell(
+        "(Get-BitLockerVolume -MountPoint 'C:').ProtectionStatus.ToString().ToLower()"
+    )
+
+
+def get_tpm_ready() -> str:
+    return run_remote_powershell(
+        "$t = Get-Tpm; ($t.TpmPresent -and $t.TpmReady).ToString().ToLower()"
+    )
+
+
+def get_secure_boot_enabled() -> str:
+    return run_remote_powershell(
+        "Confirm-SecureBootUEFI | ForEach-Object { $_.ToString().ToLower() }"
+    )
+
+
+def get_builtin_administrator_enabled() -> str:
+    return run_remote_powershell(
+        "(Get-LocalUser | Where-Object { $_.SID.Value -like '*-500' }).Enabled.ToString().ToLower()"
+    )
+
+
+def get_smb_client_signing_required() -> str:
+    return run_remote_powershell(
+        "(Get-SmbClientConfiguration).RequireSecuritySignature.ToString().ToLower()"
+    )
