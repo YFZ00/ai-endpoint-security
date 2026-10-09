@@ -41,56 +41,81 @@ from collectors.windows import (
 )
 
 from engine.evaluator import evaluate
-from engine.policy_loader import load_policies
+from engine.policy_loader import load_policy_set
 from engine.finding import create_finding
 from engine.remediation import (
     build_remediation_plan,
     request_approval,
     execute_remediation,
+    validate_agent_proposals,
 )
 from engine.audit import write_audit_event
 from engine.posture import calculate_posture
 from engine.exception import apply_exceptions
 
-from ai.analyzer import (
-    build_ai_input,
-    analyze_findings,
-)
+from ai.agent import run_security_agent
 
 
 LINUX_COLLECTORS = {
-    "permit_root_login": get_permit_root_login,
-    "password_authentication": get_password_authentication,
-    "permit_empty_passwords": get_permit_empty_passwords,
-    "max_auth_tries": get_max_auth_tries,
-    "passwd_file_security": get_passwd_file_security,
-    "shadow_file_security": get_shadow_file_security,
-    "group_file_security": get_group_file_security,
-    "gshadow_file_security": get_gshadow_file_security,
-    "pass_max_days": get_pass_max_days,
-    "pass_min_days": get_pass_min_days,
+    "permit_root_login":
+        get_permit_root_login,
+    "password_authentication":
+        get_password_authentication,
+    "permit_empty_passwords":
+        get_permit_empty_passwords,
+    "max_auth_tries":
+        get_max_auth_tries,
+    "passwd_file_security":
+        get_passwd_file_security,
+    "shadow_file_security":
+        get_shadow_file_security,
+    "group_file_security":
+        get_group_file_security,
+    "gshadow_file_security":
+        get_gshadow_file_security,
+    "pass_max_days":
+        get_pass_max_days,
+    "pass_min_days":
+        get_pass_min_days,
 }
 
 
 WINDOWS_COLLECTORS = {
-    "defender_realtime_protection": get_defender_realtime_protection,
-    "windows_firewall_all_enabled": get_windows_firewall_all_enabled,
-    "guest_account_enabled": get_guest_account_enabled,
-    "smb1_enabled": get_smb1_enabled,
-    "smb_signing_required": get_smb_signing_required,
-    "uac_enabled": get_uac_enabled,
-    "defender_behavior_monitor": get_defender_behavior_monitor,
-    "rdp_denied": get_rdp_denied,
-    "rdp_nla_required": get_rdp_nla_required,
-    "bitlocker_protection": get_bitlocker_protection,
-    "tpm_ready": get_tpm_ready,
-    "secure_boot_enabled": get_secure_boot_enabled,
-    "builtin_administrator_enabled": get_builtin_administrator_enabled,
-    "smb_client_signing_required": get_smb_client_signing_required,
+    "defender_realtime_protection":
+        get_defender_realtime_protection,
+    "windows_firewall_all_enabled":
+        get_windows_firewall_all_enabled,
+    "guest_account_enabled":
+        get_guest_account_enabled,
+    "smb1_enabled":
+        get_smb1_enabled,
+    "smb_signing_required":
+        get_smb_signing_required,
+    "uac_enabled":
+        get_uac_enabled,
+    "defender_behavior_monitor":
+        get_defender_behavior_monitor,
+    "rdp_denied":
+        get_rdp_denied,
+    "rdp_nla_required":
+        get_rdp_nla_required,
+    "bitlocker_protection":
+        get_bitlocker_protection,
+    "tpm_ready":
+        get_tpm_ready,
+    "secure_boot_enabled":
+        get_secure_boot_enabled,
+    "builtin_administrator_enabled":
+        get_builtin_administrator_enabled,
+    "smb_client_signing_required":
+        get_smb_client_signing_required,
 }
 
 
-def save_json(file_name: str, data: dict) -> None:
+def save_json(
+    file_name: str,
+    data: dict,
+) -> None:
     with open(
         file_name,
         "w",
@@ -107,29 +132,44 @@ def save_json(file_name: str, data: dict) -> None:
 def evaluate_policies(
     policy_file: str,
     collectors: dict,
-) -> list:
-    policies = load_policies(policy_file)
+) -> tuple:
+    policy_data = load_policy_set(
+        policy_file
+    )
+
+    policy_set = policy_data[
+        "metadata"
+    ]
+
+    policies = policy_data[
+        "policies"
+    ]
+
     findings = []
 
     for policy in policies:
-        collector_name = policy["collector"]
-        collector = collectors.get(collector_name)
+        collector_name = policy[
+            "collector"
+        ]
+
+        collector = collectors.get(
+            collector_name
+        )
 
         if collector is None:
             print(
-                f"[WARNING] Collector not registered: "
-                f"{collector_name}"
+                "[WARNING] Collector not "
+                f"registered: {collector_name}"
             )
+
             continue
 
         actual = collector()
-        expected = policy["expected"]
-        comparator = policy["comparator"]
 
         result = evaluate(
             actual,
-            expected,
-            comparator,
+            policy["expected"],
+            policy["comparator"],
         )
 
         finding = create_finding(
@@ -138,80 +178,101 @@ def evaluate_policies(
             result=result,
         )
 
-        findings.append(finding)
+        finding[
+            "policy_set_version"
+        ] = policy_set["version"]
 
-    return findings
+        findings.append(
+            finding
+        )
+
+    return (
+        policy_set,
+        findings,
+    )
 
 
 def scan_linux_endpoint() -> dict:
-    hostname = get_hostname()
-    kernel = get_kernel_version()
-    architecture = get_architecture()
     os_release = get_os_release()
 
-    os_name = os_release.get("NAME", "Unknown")
-    os_version = os_release.get(
-        "VERSION_ID",
-        "Unknown",
+    policy_set, findings = (
+        evaluate_policies(
+            "policies/linux.yaml",
+            LINUX_COLLECTORS,
+        )
     )
 
-    findings = evaluate_policies(
-        "policies/linux.yaml",
-        LINUX_COLLECTORS,
-    )
-
-    scan_report = {
+    report = {
         "asset": {
             "platform": "linux",
-            "hostname": hostname,
-            "os": os_name,
-            "version": os_version,
-            "kernel": kernel,
-            "architecture": architecture,
+            "hostname": get_hostname(),
+            "os": os_release.get(
+                "NAME",
+                "Unknown",
+            ),
+            "version": os_release.get(
+                "VERSION_ID",
+                "Unknown",
+            ),
+            "kernel":
+                get_kernel_version(),
+            "architecture":
+                get_architecture(),
         },
+        "policy_set": policy_set,
         "findings": findings,
     }
 
-    scan_report = apply_exceptions(scan_report)
-
-    scan_report["posture"] = calculate_posture(
-        scan_report["findings"]
+    report = apply_exceptions(
+        report
     )
 
-    return scan_report
+    report["posture"] = (
+        calculate_posture(
+            report["findings"]
+        )
+    )
+
+    return report
 
 
 def scan_windows_endpoint() -> dict:
-    hostname = get_windows_hostname()
-    os_name = get_windows_os_name()
-    os_version = get_windows_version()
-    build_number = get_windows_build_number()
-    architecture = get_windows_architecture()
-
-    findings = evaluate_policies(
-        "policies/windows.yaml",
-        WINDOWS_COLLECTORS,
+    policy_set, findings = (
+        evaluate_policies(
+            "policies/windows.yaml",
+            WINDOWS_COLLECTORS,
+        )
     )
 
-    scan_report = {
+    report = {
         "asset": {
             "platform": "windows",
-            "hostname": hostname,
-            "os": os_name,
-            "version": os_version,
-            "build": build_number,
-            "architecture": architecture,
+            "hostname":
+                get_windows_hostname(),
+            "os":
+                get_windows_os_name(),
+            "version":
+                get_windows_version(),
+            "build":
+                get_windows_build_number(),
+            "architecture":
+                get_windows_architecture(),
         },
+        "policy_set": policy_set,
         "findings": findings,
     }
 
-    scan_report = apply_exceptions(scan_report)
-
-    scan_report["posture"] = calculate_posture(
-        scan_report["findings"]
+    report = apply_exceptions(
+        report
     )
 
-    return scan_report
+    report["posture"] = (
+        calculate_posture(
+            report["findings"]
+        )
+    )
+
+    return report
 
 
 def print_endpoint_report(
@@ -219,24 +280,61 @@ def print_endpoint_report(
     scan_report: dict,
 ) -> None:
     asset = scan_report["asset"]
+    policy_set = scan_report[
+        "policy_set"
+    ]
     posture = scan_report["posture"]
 
-    print(f"=== {endpoint_name} ===")
+    print(
+        f"=== {endpoint_name} ==="
+    )
     print()
 
-    print(f"Hostname     : {asset['hostname']}")
-    print(f"OS           : {asset['os']}")
-    print(f"Version      : {asset['version']}")
+    print(
+        f"Hostname     : "
+        f"{asset['hostname']}"
+    )
+    print(
+        f"OS           : "
+        f"{asset['os']}"
+    )
+    print(
+        f"Version      : "
+        f"{asset['version']}"
+    )
 
     if asset["platform"] == "linux":
-        print(f"Kernel       : {asset['kernel']}")
+        print(
+            f"Kernel       : "
+            f"{asset['kernel']}"
+        )
 
     if asset["platform"] == "windows":
-        print(f"Build        : {asset['build']}")
+        print(
+            f"Build        : "
+            f"{asset['build']}"
+        )
 
     print(
         f"Architecture : "
         f"{asset['architecture']}"
+    )
+
+    print()
+    print("=== Policy Set ===")
+    print()
+
+    print(
+        f"Name         : "
+        f"{policy_set['name']}"
+    )
+    print(
+        f"Version      : "
+        f"{policy_set['version']}"
+    )
+    print(
+        f"Updated At   : "
+        f"{policy_set['updated_at']}"
     )
 
     print()
@@ -248,7 +346,10 @@ def print_endpoint_report(
         f"{posture['score']} / 100"
     )
 
-    if posture["raw_score"] != posture["score"]:
+    if (
+        posture["raw_score"]
+        != posture["score"]
+    ):
         print(
             f"Raw Score    : "
             f"{posture['raw_score']} / 100"
@@ -273,7 +374,9 @@ def print_endpoint_report(
         f"{posture['exception_count']}"
     )
 
-    counts = posture["failure_counts"]
+    counts = posture[
+        "failure_counts"
+    ]
 
     print(
         f"Failures     : "
@@ -287,15 +390,36 @@ def print_endpoint_report(
     print("=== Security Findings ===")
     print()
 
-    for finding in scan_report["findings"]:
-        print(f"[{finding['id']}]")
-        print(f"Title    : {finding['title']}")
-        print(f"Expected : {finding['expected']}")
-        print(f"Actual   : {finding['actual']}")
-        print(f"Severity : {finding['severity']}")
-        print(f"Result   : {finding['result']}")
+    for finding in scan_report[
+        "findings"
+    ]:
+        print(
+            f"[{finding['id']}]"
+        )
+        print(
+            f"Title    : "
+            f"{finding['title']}"
+        )
+        print(
+            f"Expected : "
+            f"{finding['expected']}"
+        )
+        print(
+            f"Actual   : "
+            f"{finding['actual']}"
+        )
+        print(
+            f"Severity : "
+            f"{finding['severity']}"
+        )
+        print(
+            f"Result   : "
+            f"{finding['result']}"
+        )
 
-        exception = finding.get("exception")
+        exception = finding.get(
+            "exception"
+        )
 
         if exception:
             print(
@@ -318,32 +442,66 @@ def print_endpoint_report(
         print()
 
 
-def analyze_endpoint(
+def run_agent_for_endpoint(
     endpoint_name: str,
     scan_report: dict,
 ) -> tuple:
     print(
-        f"=== AI Security Analysis: "
+        f"=== AI Security Agent: "
         f"{endpoint_name} ==="
     )
     print()
 
-    ai_input = build_ai_input(scan_report)
-    ai_analysis = analyze_findings(ai_input)
+    agent_result = run_security_agent(
+        scan_report
+    )
 
-    analyses = ai_analysis.get(
+    analyses = agent_result.get(
         "analyses",
         [],
     )
 
-    if not analyses:
+    proposals = agent_result.get(
+        "proposals",
+        [],
+    )
+
+    tool_trace = agent_result.get(
+        "tool_trace",
+        [],
+    )
+
+    failed_findings = [
+        finding
+        for finding in scan_report[
+            "findings"
+        ]
+        if finding["result"] == "FAIL"
+    ]
+
+    if not failed_findings:
         print(
             "No failed findings require "
-            "AI analysis."
+            "agent investigation."
         )
         print()
 
-        return ai_input, ai_analysis
+        return (
+            agent_result,
+            [],
+        )
+
+    if tool_trace:
+        tool_names = [
+            trace["tool"]
+            for trace in tool_trace
+        ]
+
+        print(
+            "Read-only Tools Used : "
+            + ", ".join(tool_names)
+        )
+        print()
 
     for analysis in analyses:
         print(
@@ -367,13 +525,88 @@ def analyze_endpoint(
         )
         print()
 
-    return ai_input, ai_analysis
+    print(
+        "=== Agent Action Proposals ==="
+    )
+    print()
+
+    if not proposals:
+        print(
+            "No remediation action proposed."
+        )
+        print()
+
+    else:
+        for proposal in proposals:
+            print(
+                f"Finding   : "
+                f"{proposal['finding_id']}"
+            )
+            print(
+                f"Action ID : "
+                f"{proposal['action_id']}"
+            )
+            print(
+                f"Reason    : "
+                f"{proposal['reason']}"
+            )
+            print()
+
+    validated = (
+        validate_agent_proposals(
+            scan_report["findings"],
+            proposals,
+        )
+    )
+
+    print(
+        "=== Harness Validation ==="
+    )
+    print()
+
+    if not validated:
+        print(
+            "No agent remediation proposal "
+            "requires validation."
+        )
+        print()
+
+    else:
+        for validation in validated:
+            status = (
+                "ALLOW"
+                if validation["allowed"]
+                else "REJECT"
+            )
+
+            print(
+                f"Finding : "
+                f"{validation['finding_id']}"
+            )
+            print(
+                f"Action  : "
+                f"{validation['action_id']}"
+            )
+            print(
+                f"Status  : {status}"
+            )
+            print(
+                f"Reason  : "
+                f"{validation['reason']}"
+            )
+            print()
+
+    return (
+        agent_result,
+        validated,
+    )
 
 
 def remediate_endpoint(
     endpoint_name: str,
     scan_report: dict,
     scan_function,
+    validated_proposals: list,
 ):
     print(
         f"=== Remediation: "
@@ -381,37 +614,45 @@ def remediate_endpoint(
     )
     print()
 
-    remediation_plan = build_remediation_plan(
-        scan_report["findings"]
+    remediation_plan = (
+        build_remediation_plan(
+            scan_report["findings"],
+            validated_proposals=
+                validated_proposals,
+        )
     )
 
     if not remediation_plan:
         failed_findings = [
             finding
-            for finding
-            in scan_report["findings"]
+            for finding in scan_report[
+                "findings"
+            ]
             if finding["result"] == "FAIL"
         ]
 
         if failed_findings:
             print(
-                "Failed findings exist, but no "
-                "automated remediation is registered."
+                "Failed findings exist, but "
+                "no AI-proposed remediation "
+                "passed the harness."
             )
         else:
             print(
                 "No remediation required. "
-                "All active policies passed or "
-                "have approved exceptions."
+                "All active policies passed "
+                "or have approved exceptions."
             )
 
         print()
+
         return None
 
     original_findings = {
         finding["id"]: finding
-        for finding
-        in scan_report["findings"]
+        for finding in scan_report[
+            "findings"
+        ]
     }
 
     executed_actions = []
@@ -434,53 +675,68 @@ def remediate_endpoint(
             f"{action['description']}"
         )
 
-        approved = request_approval(action)
+        approved = request_approval(
+            action
+        )
 
         if not approved:
-            print("Remediation rejected.")
+            print(
+                "Remediation rejected."
+            )
             print()
 
             write_audit_event(
                 {
-                    "hostname": scan_report[
-                        "asset"
-                    ]["hostname"],
-                    "platform": scan_report[
-                        "asset"
-                    ]["platform"],
-                    "finding_id": action[
-                        "finding_id"
-                    ],
-                    "before": finding[
-                        "actual"
-                    ],
+                    "hostname":
+                        scan_report[
+                            "asset"
+                        ]["hostname"],
+                    "platform":
+                        scan_report[
+                            "asset"
+                        ]["platform"],
+                    "finding_id":
+                        action[
+                            "finding_id"
+                        ],
+                    "before":
+                        finding["actual"],
                     "approved": False,
-                    "action_id": action[
-                        "action_id"
-                    ],
-                    "after": finding[
-                        "actual"
-                    ],
+                    "action_id":
+                        action[
+                            "action_id"
+                        ],
+                    "after":
+                        finding["actual"],
                     "verification":
                         "NOT_EXECUTED",
+                    "policy_set_version":
+                        finding[
+                            "policy_set_version"
+                        ],
+                    "source":
+                        "AI_AGENT_HARNESS",
                 }
             )
 
             continue
 
-        execute_remediation(action)
+        execute_remediation(
+            action
+        )
 
         executed_actions.append(
             {
-                "finding_id": action[
-                    "finding_id"
-                ],
-                "action_id": action[
-                    "action_id"
-                ],
-                "before": finding[
-                    "actual"
-                ],
+                "finding_id":
+                    action["finding_id"],
+                "action_id":
+                    action["action_id"],
+                "before":
+                    finding["actual"],
+                "policy_set_version":
+                    finding[
+                        "policy_set_version"
+                    ],
             }
         )
 
@@ -489,6 +745,7 @@ def remediate_endpoint(
             "No remediation was executed."
         )
         print()
+
         return None
 
     print()
@@ -498,12 +755,15 @@ def remediate_endpoint(
     )
     print()
 
-    verification_report = scan_function()
+    verification_report = (
+        scan_function()
+    )
 
     verification_findings = {
         finding["id"]: finding
-        for finding
-        in verification_report["findings"]
+        for finding in verification_report[
+            "findings"
+        ]
     }
 
     for finding in verification_report[
@@ -550,21 +810,27 @@ def remediate_endpoint(
                     action["finding_id"],
                 "before":
                     action["before"],
-                "approved":
-                    True,
+                "approved": True,
                 "action_id":
                     action["action_id"],
                 "after":
                     verification["actual"],
                 "verification":
                     verification["result"],
+                "policy_set_version":
+                    action[
+                        "policy_set_version"
+                    ],
+                "source":
+                    "AI_AGENT_HARNESS",
             }
         )
 
     remaining_failures = [
         finding
-        for finding
-        in verification_report["findings"]
+        for finding in verification_report[
+            "findings"
+        ]
         if finding["result"] == "FAIL"
     ]
 
@@ -576,8 +842,8 @@ def remediate_endpoint(
 
     if not remaining_failures:
         print(
-            "All active security policies passed "
-            "after remediation."
+            "All active security policies "
+            "passed after remediation."
         )
     else:
         print(
@@ -612,7 +878,9 @@ def parse_args():
 def main():
     args = parse_args()
 
-    print("=== AI Endpoint Security ===")
+    print(
+        "=== AI Endpoint Security ==="
+    )
     print()
 
     endpoints = []
@@ -632,8 +900,10 @@ def main():
 
         endpoints.append(
             {
-                "name": "Linux Endpoint",
-                "report": linux_report,
+                "name":
+                    "Linux Endpoint",
+                "report":
+                    linux_report,
                 "scan_function":
                     scan_linux_endpoint,
             }
@@ -654,8 +924,10 @@ def main():
 
         endpoints.append(
             {
-                "name": "Windows Endpoint",
-                "report": windows_report,
+                "name":
+                    "Windows Endpoint",
+                "report":
+                    windows_report,
                 "scan_function":
                     scan_windows_endpoint,
             }
@@ -671,43 +943,43 @@ def main():
         },
     )
 
-    ai_inputs = []
-    ai_analyses = []
+    agent_reports = []
 
     for endpoint in endpoints:
-        ai_input, ai_analysis = (
-            analyze_endpoint(
-                endpoint["name"],
-                endpoint["report"],
-            )
+        (
+            agent_result,
+            validated_proposals,
+        ) = run_agent_for_endpoint(
+            endpoint["name"],
+            endpoint["report"],
         )
 
-        ai_inputs.append(
-            ai_input
-        )
+        endpoint[
+            "validated_proposals"
+        ] = validated_proposals
 
-        ai_analyses.append(
+        agent_reports.append(
             {
                 "asset":
-                    endpoint["report"][
-                        "asset"
-                    ],
-                "analysis":
-                    ai_analysis,
+                    endpoint[
+                        "report"
+                    ]["asset"],
+                "policy_set":
+                    endpoint[
+                        "report"
+                    ]["policy_set"],
+                "agent":
+                    agent_result,
+                "harness":
+                    validated_proposals,
             }
         )
 
     save_json(
-        "ai_input.json",
-        {
-            "endpoints": ai_inputs
-        },
-    )
-
-    save_json(
         "ai_analysis.json",
         {
-            "endpoints": ai_analyses
+            "endpoints":
+                agent_reports
         },
     )
 
@@ -720,6 +992,9 @@ def main():
                 endpoint["report"],
                 endpoint[
                     "scan_function"
+                ],
+                endpoint[
+                    "validated_proposals"
                 ],
             )
         )

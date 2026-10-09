@@ -1,3 +1,9 @@
+policy_set:
+  name: "windows-endpoint-baseline"
+  version: "1.0.0"
+  updated_at: "2026-10-09"
+  description: "Baseline security policies for Windows endpoints."
+
 policies:
   - id: WINDOWS-DEFENDER-001
     title: Enable Microsoft Defender real-time protection
