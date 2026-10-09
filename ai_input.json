@@ -1,35 +1,59 @@
 {
-  "task": "Analyze failed endpoint security findings.",
-  "constraints": [
-    "Do not change the PASS or FAIL decision.",
-    "Do not execute remediation automatically.",
-    "Explain the security risk based on the provided finding.",
-    "Recommend a remediation action.",
-    "Describe possible operational impact before remediation."
-  ],
-  "asset": {
-    "hostname": "lab-01",
-    "os": "Ubuntu",
-    "version": "26.04",
-    "kernel": "7.0.0-38-generic",
-    "architecture": "x86_64"
-  },
-  "findings": [
+  "endpoints": [
     {
-      "id": "LINUX-ACCOUNT-001",
-      "title": "Limit default maximum password age for new accounts",
-      "expected": 90,
-      "actual": "99999",
-      "severity": "MEDIUM",
-      "result": "FAIL"
+      "task": "Analyze failed endpoint security findings.",
+      "constraints": [
+        "Do not change the PASS or FAIL decision.",
+        "Do not execute remediation automatically.",
+        "Explain the security risk based on the provided finding.",
+        "Recommend a remediation action.",
+        "Describe possible operational impact before remediation."
+      ],
+      "asset": {
+        "platform": "linux",
+        "hostname": "lab-01",
+        "os": "Ubuntu",
+        "version": "26.04",
+        "kernel": "7.0.0-38-generic",
+        "architecture": "x86_64"
+      },
+      "findings": [
+        {
+          "id": "LINUX-ACCOUNT-001",
+          "title": "Limit default maximum password age for new accounts",
+          "expected": 90,
+          "actual": "99999",
+          "severity": "MEDIUM",
+          "result": "FAIL"
+        },
+        {
+          "id": "LINUX-ACCOUNT-002",
+          "title": "Enforce minimum password age for new accounts",
+          "expected": 1,
+          "actual": "0",
+          "severity": "LOW",
+          "result": "FAIL"
+        }
+      ]
     },
     {
-      "id": "LINUX-ACCOUNT-002",
-      "title": "Enforce minimum password age for new accounts",
-      "expected": 1,
-      "actual": "0",
-      "severity": "LOW",
-      "result": "FAIL"
+      "task": "Analyze failed endpoint security findings.",
+      "constraints": [
+        "Do not change the PASS or FAIL decision.",
+        "Do not execute remediation automatically.",
+        "Explain the security risk based on the provided finding.",
+        "Recommend a remediation action.",
+        "Describe possible operational impact before remediation."
+      ],
+      "asset": {
+        "platform": "windows",
+        "hostname": "LAB-WINPC-01",
+        "os": "Microsoft Windows 11 Pro",
+        "version": "10.0.26300",
+        "build": "26300",
+        "architecture": "64비트"
+      },
+      "findings": []
     }
   ]
 }

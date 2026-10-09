@@ -17,6 +17,16 @@ from collectors.linux import (
     get_pass_min_days,
 )
 
+from collectors.windows import (
+    get_windows_hostname,
+    get_windows_os_name,
+    get_windows_version,
+    get_windows_build_number,
+    get_windows_architecture,
+    get_defender_realtime_protection,
+    get_windows_firewall_all_enabled,
+)
+
 from engine.evaluator import evaluate
 from engine.policy_loader import load_policies
 from engine.finding import create_finding
@@ -33,7 +43,7 @@ from ai.analyzer import (
 )
 
 
-COLLECTORS = {
+LINUX_COLLECTORS = {
     "permit_root_login": get_permit_root_login,
     "password_authentication": get_password_authentication,
     "permit_empty_passwords": get_permit_empty_passwords,
@@ -44,6 +54,12 @@ COLLECTORS = {
     "gshadow_file_security": get_gshadow_file_security,
     "pass_max_days": get_pass_max_days,
     "pass_min_days": get_pass_min_days,
+}
+
+
+WINDOWS_COLLECTORS = {
+    "defender_realtime_protection": get_defender_realtime_protection,
+    "windows_firewall_all_enabled": get_windows_firewall_all_enabled,
 }
 
 
@@ -61,24 +77,23 @@ def save_json(file_name: str, data: dict) -> None:
         )
 
 
-def scan_endpoint() -> dict:
-    hostname = get_hostname()
-    kernel = get_kernel_version()
-    architecture = get_architecture()
-    os_release = get_os_release()
-
-    os_name = os_release.get("NAME", "Unknown")
-    os_version = os_release.get("VERSION_ID", "Unknown")
-
-    policies = load_policies("policies/linux.yaml")
+def evaluate_policies(
+    policy_file: str,
+    collectors: dict,
+) -> list:
+    policies = load_policies(policy_file)
 
     findings = []
 
     for policy in policies:
         collector_name = policy["collector"]
-        collector = COLLECTORS.get(collector_name)
+        collector = collectors.get(collector_name)
 
         if collector is None:
+            print(
+                f"[WARNING] Collector not registered: "
+                f"{collector_name}"
+            )
             continue
 
         actual = collector()
@@ -99,8 +114,26 @@ def scan_endpoint() -> dict:
 
         findings.append(finding)
 
+    return findings
+
+
+def scan_linux_endpoint() -> dict:
+    hostname = get_hostname()
+    kernel = get_kernel_version()
+    architecture = get_architecture()
+    os_release = get_os_release()
+
+    os_name = os_release.get("NAME", "Unknown")
+    os_version = os_release.get("VERSION_ID", "Unknown")
+
+    findings = evaluate_policies(
+        "policies/linux.yaml",
+        LINUX_COLLECTORS,
+    )
+
     return {
         "asset": {
+            "platform": "linux",
             "hostname": hostname,
             "os": os_name,
             "version": os_version,
@@ -111,16 +144,50 @@ def scan_endpoint() -> dict:
     }
 
 
-def print_scan_report(scan_report: dict) -> None:
+def scan_windows_endpoint() -> dict:
+    hostname = get_windows_hostname()
+    os_name = get_windows_os_name()
+    os_version = get_windows_version()
+    build_number = get_windows_build_number()
+    architecture = get_windows_architecture()
+
+    findings = evaluate_policies(
+        "policies/windows.yaml",
+        WINDOWS_COLLECTORS,
+    )
+
+    return {
+        "asset": {
+            "platform": "windows",
+            "hostname": hostname,
+            "os": os_name,
+            "version": os_version,
+            "build": build_number,
+            "architecture": architecture,
+        },
+        "findings": findings,
+    }
+
+
+def print_endpoint_report(
+    endpoint_name: str,
+    scan_report: dict,
+) -> None:
     asset = scan_report["asset"]
 
-    print("=== AI Endpoint Security ===")
+    print(f"=== {endpoint_name} ===")
     print()
 
     print(f"Hostname     : {asset['hostname']}")
     print(f"OS           : {asset['os']}")
     print(f"Version      : {asset['version']}")
-    print(f"Kernel       : {asset['kernel']}")
+
+    if asset["platform"] == "linux":
+        print(f"Kernel       : {asset['kernel']}")
+
+    if asset["platform"] == "windows":
+        print(f"Build        : {asset['build']}")
+
     print(f"Architecture : {asset['architecture']}")
 
     print()
@@ -137,62 +204,52 @@ def print_scan_report(scan_report: dict) -> None:
         print()
 
 
-def main():
-    # 1. 최초 보안점검
-    scan_report = scan_endpoint()
-
-    print_scan_report(scan_report)
-
-    save_json(
-        "scan_report.json",
-        scan_report,
-    )
-
-    # 2. FAIL Finding만 AI 분석
-    ai_input = build_ai_input(scan_report)
-
-    save_json(
-        "ai_input.json",
-        ai_input,
-    )
-
-    print("=== AI Security Analysis ===")
+def analyze_endpoint(
+    endpoint_name: str,
+    scan_report: dict,
+) -> tuple:
+    print(f"=== AI Security Analysis: {endpoint_name} ===")
     print()
 
+    ai_input = build_ai_input(scan_report)
     ai_analysis = analyze_findings(ai_input)
-
-    save_json(
-        "ai_analysis.json",
-        ai_analysis,
-    )
 
     analyses = ai_analysis.get("analyses", [])
 
     if not analyses:
         print("No failed findings require AI analysis.")
         print()
-    else:
-        for analysis in analyses:
-            print(f"[{analysis['finding_id']}]")
-            print(f"Cause              : {analysis['cause']}")
-            print(f"Risk               : {analysis['risk']}")
-            print(
-                f"Recommendation     : "
-                f"{analysis['recommendation']}"
-            )
-            print(
-                f"Operational Impact : "
-                f"{analysis['operational_impact']}"
-            )
-            print()
 
-    # 3. 자동조치 가능한 Finding만 Plan 생성
+        return ai_input, ai_analysis
+
+    for analysis in analyses:
+        print(f"[{analysis['finding_id']}]")
+        print(f"Cause              : {analysis['cause']}")
+        print(f"Risk               : {analysis['risk']}")
+        print(
+            f"Recommendation     : "
+            f"{analysis['recommendation']}"
+        )
+        print(
+            f"Operational Impact : "
+            f"{analysis['operational_impact']}"
+        )
+        print()
+
+    return ai_input, ai_analysis
+
+
+def remediate_endpoint(
+    endpoint_name: str,
+    scan_report: dict,
+    scan_function,
+):
+    print(f"=== Remediation: {endpoint_name} ===")
+    print()
+
     remediation_plan = build_remediation_plan(
         scan_report["findings"]
     )
-
-    print("=== Remediation ===")
-    print()
 
     if not remediation_plan:
         failed_findings = [
@@ -212,7 +269,8 @@ def main():
                 "All policies passed."
             )
 
-        return
+        print()
+        return None
 
     original_findings = {
         finding["id"]: finding
@@ -221,7 +279,6 @@ def main():
 
     executed_actions = []
 
-    # 4. Human Approval
     for action in remediation_plan:
         finding = original_findings[
             action["finding_id"]
@@ -240,6 +297,7 @@ def main():
             write_audit_event(
                 {
                     "hostname": scan_report["asset"]["hostname"],
+                    "platform": scan_report["asset"]["platform"],
                     "finding_id": action["finding_id"],
                     "before": finding["actual"],
                     "approved": False,
@@ -263,14 +321,14 @@ def main():
 
     if not executed_actions:
         print("No remediation was executed.")
-        return
+        print()
+        return None
 
-    # 5. 실제 조치 후 재점검
     print()
-    print("=== Verification Scan ===")
+    print(f"=== Verification Scan: {endpoint_name} ===")
     print()
 
-    verification_report = scan_endpoint()
+    verification_report = scan_function()
 
     verification_findings = {
         finding["id"]: finding
@@ -284,12 +342,6 @@ def main():
         print(f"Result   : {finding['result']}")
         print()
 
-    save_json(
-        "verification_report.json",
-        verification_report,
-    )
-
-    # 6. 조치 전/후 Audit Log 기록
     for action in executed_actions:
         verification = verification_findings.get(
             action["finding_id"]
@@ -301,6 +353,7 @@ def main():
         write_audit_event(
             {
                 "hostname": verification_report["asset"]["hostname"],
+                "platform": verification_report["asset"]["platform"],
                 "finding_id": action["finding_id"],
                 "before": action["before"],
                 "approved": True,
@@ -310,14 +363,13 @@ def main():
             }
         )
 
-    # 7. 최종 결과
     remaining_failures = [
         finding
         for finding in verification_report["findings"]
         if finding["result"] == "FAIL"
     ]
 
-    print("=== Verification Result ===")
+    print(f"=== Verification Result: {endpoint_name} ===")
     print()
 
     if not remaining_failures:
@@ -330,6 +382,108 @@ def main():
             f"{len(remaining_failures)} finding(s) "
             "remain unresolved."
         )
+
+    print()
+
+    return verification_report
+
+
+def main():
+    print("=== AI Endpoint Security ===")
+    print()
+
+    # 1. Scan all endpoints
+    linux_report = scan_linux_endpoint()
+    windows_report = scan_windows_endpoint()
+
+    print_endpoint_report(
+        "Linux Endpoint",
+        linux_report,
+    )
+
+    print_endpoint_report(
+        "Windows Endpoint",
+        windows_report,
+    )
+
+    save_json(
+        "scan_report.json",
+        {
+            "endpoints": [
+                linux_report,
+                windows_report,
+            ]
+        },
+    )
+
+    # 2. AI analysis
+    linux_ai_input, linux_ai_analysis = analyze_endpoint(
+        "Linux Endpoint",
+        linux_report,
+    )
+
+    windows_ai_input, windows_ai_analysis = analyze_endpoint(
+        "Windows Endpoint",
+        windows_report,
+    )
+
+    save_json(
+        "ai_input.json",
+        {
+            "endpoints": [
+                linux_ai_input,
+                windows_ai_input,
+            ]
+        },
+    )
+
+    save_json(
+        "ai_analysis.json",
+        {
+            "endpoints": [
+                {
+                    "asset": linux_report["asset"],
+                    "analysis": linux_ai_analysis,
+                },
+                {
+                    "asset": windows_report["asset"],
+                    "analysis": windows_ai_analysis,
+                },
+            ]
+        },
+    )
+
+    # 3. Human-approved remediation
+    linux_verification = remediate_endpoint(
+        "Linux Endpoint",
+        linux_report,
+        scan_linux_endpoint,
+    )
+
+    windows_verification = remediate_endpoint(
+        "Windows Endpoint",
+        windows_report,
+        scan_windows_endpoint,
+    )
+
+    verification_reports = []
+
+    if linux_verification is not None:
+        verification_reports.append(
+            linux_verification
+        )
+
+    if windows_verification is not None:
+        verification_reports.append(
+            windows_verification
+        )
+
+    save_json(
+        "verification_report.json",
+        {
+            "endpoints": verification_reports
+        },
+    )
 
 
 if __name__ == "__main__":
