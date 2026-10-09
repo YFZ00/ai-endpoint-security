@@ -1,5 +1,5 @@
-import json
 import argparse
+import json
 
 from collectors.linux import (
     get_hostname,
@@ -49,6 +49,7 @@ from engine.remediation import (
     execute_remediation,
 )
 from engine.audit import write_audit_event
+from engine.posture import calculate_posture
 
 from ai.analyzer import (
     build_ai_input,
@@ -89,11 +90,7 @@ WINDOWS_COLLECTORS = {
 
 
 def save_json(file_name: str, data: dict) -> None:
-    with open(
-        file_name,
-        "w",
-        encoding="utf-8",
-    ) as file:
+    with open(file_name, "w", encoding="utf-8") as file:
         json.dump(
             data,
             file,
@@ -107,7 +104,6 @@ def evaluate_policies(
     collectors: dict,
 ) -> list:
     policies = load_policies(policy_file)
-
     findings = []
 
     for policy in policies:
@@ -156,6 +152,8 @@ def scan_linux_endpoint() -> dict:
         LINUX_COLLECTORS,
     )
 
+    posture = calculate_posture(findings)
+
     return {
         "asset": {
             "platform": "linux",
@@ -166,6 +164,7 @@ def scan_linux_endpoint() -> dict:
             "architecture": architecture,
         },
         "findings": findings,
+        "posture": posture,
     }
 
 
@@ -181,6 +180,8 @@ def scan_windows_endpoint() -> dict:
         WINDOWS_COLLECTORS,
     )
 
+    posture = calculate_posture(findings)
+
     return {
         "asset": {
             "platform": "windows",
@@ -191,6 +192,7 @@ def scan_windows_endpoint() -> dict:
             "architecture": architecture,
         },
         "findings": findings,
+        "posture": posture,
     }
 
 
@@ -199,6 +201,7 @@ def print_endpoint_report(
     scan_report: dict,
 ) -> None:
     asset = scan_report["asset"]
+    posture = scan_report["posture"]
 
     print(f"=== {endpoint_name} ===")
     print()
@@ -214,6 +217,23 @@ def print_endpoint_report(
         print(f"Build        : {asset['build']}")
 
     print(f"Architecture : {asset['architecture']}")
+
+    print()
+    print("=== Endpoint Posture ===")
+    print()
+
+    print(f"Score        : {posture['score']} / 100")
+    print(f"Risk Level   : {posture['risk_level']}")
+
+    counts = posture["failure_counts"]
+
+    print(
+        f"Failures     : "
+        f"CRITICAL={counts['CRITICAL']} "
+        f"HIGH={counts['HIGH']} "
+        f"MEDIUM={counts['MEDIUM']} "
+        f"LOW={counts['LOW']}"
+    )
 
     print()
     print("=== Security Findings ===")
@@ -244,7 +264,6 @@ def analyze_endpoint(
     if not analyses:
         print("No failed findings require AI analysis.")
         print()
-
         return ai_input, ai_analysis
 
     for analysis in analyses:
@@ -412,6 +431,7 @@ def remediate_endpoint(
 
     return verification_report
 
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="AI Endpoint Security"
@@ -425,6 +445,7 @@ def parse_args():
     )
 
     return parser.parse_args()
+
 
 def main():
     args = parse_args()
