@@ -2,56 +2,46 @@
   "endpoints": [
     {
       "asset": {
-        "platform": "linux",
-        "hostname": "lab-01",
-        "os": "Ubuntu",
-        "version": "26.04",
-        "kernel": "7.0.0-38-generic",
-        "architecture": "x86_64"
+        "platform": "windows",
+        "hostname": "LAB-WINPC-01",
+        "os": "Microsoft Windows 11 Pro",
+        "version": "10.0.26300",
+        "build": "26300",
+        "architecture": "64비트"
       },
       "policy_set": {
-        "name": "linux-endpoint-baseline",
+        "name": "windows-endpoint-baseline",
         "version": "1.0.0",
         "updated_at": "2026-10-09",
-        "description": "Baseline security policies for Linux endpoints."
+        "description": "Baseline security policies for Windows endpoints."
       },
       "agent": {
         "analyses": [
           {
-            "finding_id": "LINUX-ACCOUNT-001",
-            "cause": "신규 계정의 기본 최대 암호 사용 기간이 정책 기준 90일보다 긴 99999일로 설정되어 있습니다.",
-            "risk": "암호가 장기간 변경되지 않아 유출된 암호가 악용될 수 있는 기간이 늘어납니다. 심각도는 MEDIUM입니다.",
-            "recommendation": "승인된 계정 정책 변경 절차를 통해 신규 계정의 기본 최대 암호 사용 기간을 90일로 설정하는 것을 검토하세요.",
-            "operational_impact": "변경 시 이후 생성되는 계정에 암호 만료 정책이 적용되어 사용자가 주기적으로 암호를 변경해야 할 수 있습니다. 기존 계정에 미치는 영향은 별도 확인이 필요합니다."
-          },
-          {
-            "finding_id": "LINUX-ACCOUNT-002",
-            "cause": "신규 계정의 기본 최소 암호 사용 기간이 정책 기준 1일보다 짧은 0일로 설정되어 있습니다.",
-            "risk": "사용자가 암호를 연속해서 변경해 암호 기록 제한을 우회할 가능성이 커집니다. 심각도는 LOW입니다.",
-            "recommendation": "승인된 계정 정책 변경 절차를 통해 신규 계정의 기본 최소 암호 사용 기간을 1일로 설정하는 것을 검토하세요.",
-            "operational_impact": "변경 시 이후 생성되는 계정은 암호 변경 후 최소 1일 동안 다시 변경할 수 없게 되어, 즉각적인 암호 변경이 필요한 상황에서 불편이 발생할 수 있습니다."
+            "finding_id": "WINDOWS-FIREWALL-001",
+            "cause": "Windows Firewall이 모든 프로필에서 활성화되어야 하지만 현재 상태는 비활성화입니다.",
+            "risk": "방화벽 보호가 없어 네트워크 공격 및 불필요한 연결에 노출될 위험이 높습니다.",
+            "recommendation": "모든 프로필에서 Windows Firewall을 활성화하는 방안을 권고합니다.",
+            "operational_impact": "방화벽 활성화 후 일부 인바운드 연결이나 방화벽 규칙에 의존하는 애플리케이션의 통신이 차단될 수 있습니다."
           }
         ],
-        "proposals": [],
+        "proposals": [
+          {
+            "finding_id": "WINDOWS-FIREWALL-001",
+            "action_id": "enable_windows_firewall",
+            "reason": "플랫폼에 등록된 이 실패 항목의 승인된 조치이며, 모든 프로필에서 Windows Firewall을 활성화하도록 제안합니다. 실행 여부는 운영자와 애플리케이션이 결정해야 합니다."
+          }
+        ],
         "tool_trace": [
           {
             "tool": "get_failed_findings",
             "result": [
               {
-                "id": "LINUX-ACCOUNT-001",
-                "title": "Limit default maximum password age for new accounts",
-                "expected": 90,
-                "actual": "99999",
-                "severity": "MEDIUM",
-                "result": "FAIL",
-                "policy_set_version": "1.0.0"
-              },
-              {
-                "id": "LINUX-ACCOUNT-002",
-                "title": "Enforce minimum password age for new accounts",
-                "expected": 1,
-                "actual": "0",
-                "severity": "LOW",
+                "id": "WINDOWS-FIREWALL-001",
+                "title": "Enable Windows Firewall for all profiles",
+                "expected": "true",
+                "actual": "false",
+                "severity": "HIGH",
                 "result": "FAIL",
                 "policy_set_version": "1.0.0"
               }
@@ -61,60 +51,83 @@
             "tool": "get_posture",
             "result": {
               "asset": {
-                "platform": "linux",
-                "hostname": "lab-01",
-                "os": "Ubuntu",
-                "version": "26.04",
-                "kernel": "7.0.0-38-generic",
-                "architecture": "x86_64"
+                "platform": "windows",
+                "hostname": "LAB-WINPC-01",
+                "os": "Microsoft Windows 11 Pro",
+                "version": "10.0.26300",
+                "build": "26300",
+                "architecture": "64비트"
               },
               "policy_set": {
-                "name": "linux-endpoint-baseline",
+                "name": "windows-endpoint-baseline",
                 "version": "1.0.0",
                 "updated_at": "2026-10-09",
-                "description": "Baseline security policies for Linux endpoints."
+                "description": "Baseline security policies for Windows endpoints."
               },
               "posture": {
-                "score": 91,
-                "raw_score": 91,
-                "risk_level": "LOW",
-                "raw_risk_level": "LOW",
+                "score": 88,
+                "raw_score": 76,
+                "risk_level": "MEDIUM",
+                "raw_risk_level": "MEDIUM",
                 "failure_counts": {
                   "CRITICAL": 0,
-                  "HIGH": 0,
-                  "MEDIUM": 1,
-                  "LOW": 1
+                  "HIGH": 1,
+                  "MEDIUM": 0,
+                  "LOW": 0
                 },
                 "raw_failure_counts": {
                   "CRITICAL": 0,
-                  "HIGH": 0,
-                  "MEDIUM": 1,
-                  "LOW": 1
+                  "HIGH": 2,
+                  "MEDIUM": 0,
+                  "LOW": 0
                 },
-                "exception_count": 0,
+                "exception_count": 1,
                 "failed_findings": [
                   {
-                    "id": "LINUX-ACCOUNT-001",
-                    "title": "Limit default maximum password age for new accounts",
-                    "severity": "MEDIUM"
-                  },
-                  {
-                    "id": "LINUX-ACCOUNT-002",
-                    "title": "Enforce minimum password age for new accounts",
-                    "severity": "LOW"
+                    "id": "WINDOWS-FIREWALL-001",
+                    "title": "Enable Windows Firewall for all profiles",
+                    "severity": "HIGH"
                   }
                 ],
-                "exempt_findings": []
+                "exempt_findings": [
+                  {
+                    "id": "WINDOWS-DISK-001",
+                    "title": "Enable BitLocker protection on system drive",
+                    "severity": "HIGH",
+                    "exception": {
+                      "id": "EXC-001",
+                      "status": "ACTIVE",
+                      "reason": "BitLocker is intentionally disabled on this disposable lab VM.",
+                      "approved_by": "lab-owner",
+                      "approved_at": "2026-10-09",
+                      "expires_at": "2026-11-30"
+                    }
+                  }
+                ]
               }
             }
           },
           {
             "tool": "get_remediation_capabilities",
-            "result": []
+            "result": [
+              {
+                "finding_id": "WINDOWS-FIREWALL-001",
+                "action_id": "enable_windows_firewall",
+                "description": "Enable Windows Firewall for all profiles."
+              }
+            ]
           }
         ]
       },
-      "harness": []
+      "harness": [
+        {
+          "finding_id": "WINDOWS-FIREWALL-001",
+          "action_id": "enable_windows_firewall",
+          "description": "Enable Windows Firewall for all profiles.",
+          "allowed": true,
+          "reason": "Finding is FAIL and the proposed action exactly matches the platform allowlist."
+        }
+      ]
     }
   ]
 }
